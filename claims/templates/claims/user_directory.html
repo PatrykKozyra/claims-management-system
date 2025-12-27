@@ -1,0 +1,253 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}User Directory - Claims Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-people"></i> User Directory</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if perms.claims.export_users or user.is_staff %}
+        <a href="{% url 'export_users' %}" class="btn btn-sm btn-success">
+            <i class="bi bi-file-earmark-excel"></i> Export to Excel
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-funnel"></i> Search & Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3" id="filterForm">
+            <input type="hidden" name="view" value="{{ view_mode }}">
+            <input type="hidden" name="sort" value="{{ sort_by }}">
+            <input type="hidden" name="order" value="{{ sort_order }}">
+
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Name, username, or email..." value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Role</label>
+                <select name="role" class="form-select">
+                    <option value="">All Roles</option>
+                    {% for value, label in role_choices %}
+                    <option value="{{ value }}" {% if role_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Department</label>
+                <select name="department" class="form-select">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept }}" {% if department_filter == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- View Controls -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="btn-group" role="group">
+        <a href="?view=cards&search={{ search_query }}&role={{ role_filter }}&department={{ department_filter }}&sort={{ sort_by }}&order={{ sort_order }}"
+           class="btn btn-sm btn-outline-secondary {% if view_mode == 'cards' %}active{% endif %}">
+            <i class="bi bi-grid-3x3-gap"></i> Cards
+        </a>
+        <a href="?view=table&search={{ search_query }}&role={{ role_filter }}&department={{ department_filter }}&sort={{ sort_by }}&order={{ sort_order }}"
+           class="btn btn-sm btn-outline-secondary {% if view_mode == 'table' %}active{% endif %}">
+            <i class="bi bi-table"></i> Table
+        </a>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        <label class="mb-0 me-2">Sort by:</label>
+        <select class="form-select form-select-sm" id="sortSelect" style="width: auto;">
+            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+            <option value="created" {% if sort_by == 'created' %}selected{% endif %}>Date Joined</option>
+            <option value="voyages" {% if sort_by == 'voyages' %}selected{% endif %}>Voyages</option>
+            <option value="claims" {% if sort_by == 'claims' %}selected{% endif %}>Claims</option>
+        </select>
+        <a href="#" id="sortOrderToggle" class="btn btn-sm btn-outline-secondary" title="Toggle sort order">
+            {% if sort_order == 'asc' %}
+            <i class="bi bi-sort-down"></i>
+            {% else %}
+            <i class="bi bi-sort-up"></i>
+            {% endif %}
+            {{ sort_order|upper }}
+        </a>
+    </div>
+</div>
+
+{% if view_mode == 'table' %}
+<!-- Table View -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Department</th>
+                    <th class="text-center">Voyages</th>
+                    <th class="text-center">Claims</th>
+                    <th>Date Joined</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user_obj in users %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            {% if user_obj.profile_photo %}
+                            <img src="{{ user_obj.profile_photo.url }}" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="{{ user_obj.get_full_name }}">
+                            {% else %}
+                            <i class="bi bi-person-circle me-2" style="font-size: 40px;"></i>
+                            {% endif %}
+                            <div>
+                                <a href="{% url 'user_profile' user_obj.id %}" class="user-link fw-semibold">
+                                    {{ user_obj.get_full_name|default:user_obj.username }}
+                                </a>
+                                {% if user_obj.position %}
+                                <br><small class="text-muted">{{ user_obj.position }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ user_obj.email|default:"-" }}</td>
+                    <td><span class="badge bg-primary">{{ user_obj.get_role_display }}</span></td>
+                    <td>{{ user_obj.department|default:"-" }}</td>
+                    <td class="text-center">{{ user_obj.voyages_count }}</td>
+                    <td class="text-center">{{ user_obj.claims_count }}</td>
+                    <td>{{ user_obj.date_joined|date:"Y-m-d" }}</td>
+                    <td class="text-center">
+                        <a href="{% url 'user_profile' user_obj.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-4">
+                        <i class="bi bi-info-circle"></i> No users found matching your criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<!-- Cards View -->
+<div class="row">
+    {% for user_obj in users %}
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                        {% if user_obj.profile_photo %}
+                        <img src="{{ user_obj.profile_photo.url }}" class="profile-photo-large" alt="{{ user_obj.get_full_name }}">
+                        {% else %}
+                        <i class="bi bi-person-circle" style="font-size: 80px;"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="card-title mb-1">
+                            <a href="{% url 'user_profile' user_obj.id %}" class="user-link">
+                                {{ user_obj.get_full_name|default:user_obj.username }}
+                            </a>
+                        </h5>
+                        {% if user_obj.position %}
+                        <p class="text-muted small mb-1">{{ user_obj.position }}</p>
+                        {% endif %}
+                        <p class="mb-2">
+                            <span class="badge bg-primary">{{ user_obj.get_role_display }}</span>
+                        </p>
+
+                        {% if user_obj.department %}
+                        <p class="small mb-1">
+                            <i class="bi bi-building"></i> {{ user_obj.department }}
+                        </p>
+                        {% endif %}
+
+                        <p class="small mb-1">
+                            <i class="bi bi-envelope"></i> {{ user_obj.email|default:"-" }}
+                        </p>
+
+                        {% if user_obj.phone %}
+                        <p class="small mb-1">
+                            <i class="bi bi-telephone"></i> {{ user_obj.phone }}
+                        </p>
+                        {% endif %}
+
+                        <hr class="my-2">
+
+                        <div class="row text-center small">
+                            <div class="col-6">
+                                <strong>{{ user_obj.voyages_count }}</strong><br>
+                                <span class="text-muted">Voyages</span>
+                            </div>
+                            <div class="col-6">
+                                <strong>{{ user_obj.claims_count }}</strong><br>
+                                <span class="text-muted">Claims</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'user_profile' user_obj.id %}" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-person"></i> View Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No users found matching your criteria.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="mt-3">
+    <p class="text-muted">
+        <i class="bi bi-info-circle"></i> Showing {{ users.count }} user{{ users.count|pluralize }}
+        {% if search_query or role_filter or department_filter %}
+        (filtered)
+        {% endif %}
+    </p>
+</div>
+
+<script>
+// Sort controls
+document.getElementById('sortSelect').addEventListener('change', function() {
+    const url = new URL(window.location);
+    url.searchParams.set('sort', this.value);
+    window.location = url;
+});
+
+document.getElementById('sortOrderToggle').addEventListener('click', function(e) {
+    e.preventDefault();
+    const url = new URL(window.location);
+    const currentOrder = url.searchParams.get('order') || 'asc';
+    url.searchParams.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
+    window.location = url;
+});
+</script>
+{% endblock %}

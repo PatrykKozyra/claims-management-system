@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="{% if user.is_authenticated and user.dark_mode %}dark{% else %}light{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Claims Management System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            padding-top: 60px; /* Space for fixed navbar */
+        }
+
+        /* Top Navbar */
+        .top-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            background-color: var(--bs-body-bg);
+            border-bottom: 2px solid var(--bs-border-color);
+            padding: 0.75rem 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .navbar-brand-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--bs-primary);
+        }
+        .user-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1rem;
+            border-radius: 25px;
+            background-color: var(--bs-light);
+            border: 2px solid var(--bs-border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .theme-toggle .icon {
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        .theme-toggle .sun-icon {
+            color: #ffa500;
+        }
+        .theme-toggle .moon-icon {
+            color: #4169e1;
+        }
+
+        /* User Dropdown */
+        .user-dropdown {
+            position: relative;
+        }
+        .user-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1rem;
+            background-color: transparent;
+            border: 2px solid var(--bs-border-color);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--bs-body-color);
+        }
+        .user-dropdown-toggle:hover {
+            background-color: var(--bs-light);
+            border-color: var(--bs-primary);
+            transform: scale(1.02);
+        }
+        .user-dropdown-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 0.5rem);
+            min-width: 220px;
+            background-color: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 1050;
+        }
+        .user-dropdown.show .user-dropdown-menu {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .user-dropdown-menu .user-info {
+            padding: 1rem;
+            border-bottom: 1px solid var(--bs-border-color);
+        }
+        .user-dropdown-menu .user-name {
+            font-weight: 600;
+            color: var(--bs-body-color);
+            display: block;
+        }
+        .user-dropdown-menu .user-role {
+            font-size: 0.85rem;
+            color: var(--bs-secondary);
+        }
+        .user-dropdown-menu .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--bs-body-color);
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .user-dropdown-menu .dropdown-item:hover {
+            background-color: rgba(13, 110, 253, 0.1);
+            padding-left: 1.25rem;
+        }
+        .user-dropdown-menu .dropdown-item.logout {
+            color: #dc3545;
+            font-weight: bold;
+            border-top: 1px solid var(--bs-border-color);
+        }
+        .user-dropdown-menu .dropdown-item.logout:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            min-height: calc(100vh - 60px);
+            background-color: var(--bs-secondary-bg);
+            box-shadow: 2px 0 5px rgba(0,0,0,0.08);
+        }
+        .nav-link.active {
+            background-color: #0d6efd;
+            color: white !important;
+        }
+
+        /* Collapsible menu styles */
+        .menu-group-header {
+            cursor: pointer;
+            padding: 0.6rem 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--bs-body-color);
+            transition: all 0.3s ease;
+        }
+        .menu-group-header:hover {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: var(--bs-primary);
+        }
+        .menu-group-header i.bi-chevron-down {
+            transition: transform 0.3s ease;
+        }
+        .menu-group-header.collapsed i.bi-chevron-down {
+            transform: rotate(-90deg);
+        }
+        .menu-group-items {
+            padding-left: 0;
+        }
+        .menu-group-items .nav-link {
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            font-size: 0.9rem;
+            color: var(--bs-body-color);
+            transition: all 0.2s;
+        }
+        .menu-group-items .nav-link:hover {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: var(--bs-primary);
+            padding-left: 2.75rem;
+        }
+        .menu-group-items .nav-link.placeholder {
+            padding: 0.5rem 1rem 0.5rem 2.5rem !important;
+            font-size: 0.9rem;
+            color: var(--bs-body-color) !important;
+            background-color: transparent !important;
+            transition: all 0.2s;
+            cursor: not-allowed;
+        }
+        .menu-group-items .nav-link.placeholder::after {
+            content: " (Coming Soon)";
+            font-size: 0.75rem;
+            font-style: italic;
+            color: #6c757d;
+            margin-left: 0.5rem;
+        }
+        .menu-group-items .nav-link.placeholder:hover {
+            background-color: rgba(13, 110, 253, 0.1) !important;
+            color: var(--bs-primary) !important;
+            padding-left: 2.75rem !important;
+        }
+
+        /* Status badges */
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        .status-DRAFT { background-color: #6c757d; color: white; }
+        .status-UNDER_REVIEW { background-color: #ffc107; color: black; }
+        .status-SUBMITTED { background-color: #0dcaf0; color: black; }
+        .status-SETTLED { background-color: #198754; color: white; }
+        .status-REJECTED { background-color: #dc3545; color: white; }
+
+        /* Profile photo styles */
+        .profile-photo-small {
+            width: 32px;
+            height: 32px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid var(--bs-primary);
+        }
+        .profile-photo-large {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        .user-link {
+            text-decoration: none;
+            color: inherit;
+        }
+        .user-link:hover {
+            text-decoration: underline;
+            color: var(--bs-primary);
+        }
+    </style>
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <!-- Top Navbar -->
+    <nav class="top-navbar d-flex align-items-center justify-content-between">
+        <div class="navbar-brand-text">
+            <i class="bi bi-clipboard-data"></i> MARITIME CMS
+        </div>
+
+        <div class="user-controls">
+            <!-- Theme Toggle -->
+            <button id="darkModeToggle" class="theme-toggle">
+                <i class="bi bi-sun icon sun-icon" style="{% if user.dark_mode %}display:none;{% endif %}"></i>
+                <i class="bi bi-moon-stars icon moon-icon" style="{% if not user.dark_mode %}display:none;{% endif %}"></i>
+            </button>
+
+            <!-- User Dropdown -->
+            <div class="user-dropdown" id="userDropdown">
+                <div class="user-dropdown-toggle">
+                    {% if user.profile_photo %}
+                    <img src="{{ user.profile_photo.url }}" class="profile-photo-small" alt="{{ user.get_full_name }}">
+                    {% else %}
+                    <i class="bi bi-person-circle" style="font-size: 1.5rem;"></i>
+                    {% endif %}
+                    <span class="fw-semibold">{{ user.get_full_name|default:user.username }}</span>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div class="user-dropdown-menu">
+                    <div class="user-info">
+                        <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+                        <small class="user-role">{{ user.get_role_display }}</small>
+                    </div>
+                    <a href="{% url 'user_profile' user.id %}" class="dropdown-item">
+                        <i class="bi bi-person"></i>
+                        My Profile
+                    </a>
+                    {% if user.is_staff %}
+                    <a href="{% url 'admin:index' %}" class="dropdown-item">
+                        <i class="bi bi-gear"></i>
+                        Admin Panel
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'logout' %}" class="dropdown-item logout" title="Logout from the system">
+                        <i class="bi bi-box-arrow-right"></i>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <!-- Navigation Menu -->
+                    <div class="nav-menu">
+                        <!-- CLAIMS SYSTEM Group -->
+                        <div class="menu-group mb-2">
+                            <div class="menu-group-header" data-bs-toggle="collapse" data-bs-target="#claimsMenu" aria-expanded="true">
+                                <i class="bi bi-chevron-down me-1"></i>
+                                <i class="bi bi-file-earmark-text me-1"></i>
+                                Claims System
+                            </div>
+                            <div class="collapse show" id="claimsMenu">
+                                <ul class="nav flex-column menu-group-items">
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                                            <i class="bi bi-speedometer2"></i> Dashboard
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if 'voyage' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'voyage_list' %}">
+                                            <i class="bi bi-compass"></i> Voyage Assignment
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if 'claim' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'claim_list' %}">
+                                            <i class="bi bi-file-text"></i> Claims
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if 'analytics' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'analytics' %}">
+                                            <i class="bi bi-graph-up"></i> Analytics
+                                        </a>
+                                    </li>
+                                    {% if user.can_export %}
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{% url 'export_claims' %}">
+                                            <i class="bi bi-file-earmark-excel"></i> Export
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% if perms.claims.view_user_directory or user.is_staff %}
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'user_directory' %}">
+                                            <i class="bi bi-people"></i> Users
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- SHIP DATA Group -->
+                        <div class="menu-group mb-2">
+                            <div class="menu-group-header collapsed" data-bs-toggle="collapse" data-bs-target="#shipDataMenu" aria-expanded="false">
+                                <i class="bi bi-chevron-down me-1"></i>
+                                <i class="bi bi-boxes me-1"></i>
+                                Ship Data
+                            </div>
+                            <div class="collapse" id="shipDataMenu">
+                                <ul class="nav flex-column menu-group-items">
+                                    <li class="nav-item">
+                                        <a class="nav-link placeholder" href="#" onclick="return false;">
+                                            <i class="bi bi-building"></i> TC Fleet
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link placeholder" href="#" onclick="return false;">
+                                            <i class="bi bi-card-list"></i> Ship Specification
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- PORT ACTIVITY Group -->
+                        <div class="menu-group mb-2">
+                            <div class="menu-group-header collapsed" data-bs-toggle="collapse" data-bs-target="#portActivityMenu" aria-expanded="false">
+                                <i class="bi bi-chevron-down me-1"></i>
+                                <i class="bi bi-geo-alt me-1"></i>
+                                Port Activity
+                            </div>
+                            <div class="collapse" id="portActivityMenu">
+                                <ul class="nav flex-column menu-group-items">
+                                    <li class="nav-item">
+                                        <a class="nav-link placeholder" href="#" onclick="return false;">
+                                            <i class="bi bi-list-ul"></i> All
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link placeholder" href="#" onclick="return false;">
+                                            <i class="bi bi-arrows-move"></i> STS Only
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link placeholder" href="#" onclick="return false;">
+                                            <i class="bi bi-box-arrow-in-down"></i> Load & Discharge
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link placeholder" href="#" onclick="return false;">
+                                            <i class="bi bi-wrench"></i> Offhire, Dry-Docking
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="pt-3 pb-2 mb-3">
+                    {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+        </div>
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Dark mode toggle
+        document.getElementById('darkModeToggle')?.addEventListener('click', function() {
+            fetch('{% url "toggle_dark_mode" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                const html = document.querySelector('html');
+                const sunIcon = this.querySelector('.sun-icon');
+                const moonIcon = this.querySelector('.moon-icon');
+
+                if (data.dark_mode) {
+                    html.setAttribute('data-bs-theme', 'dark');
+                    sunIcon.style.display = 'none';
+                    moonIcon.style.display = 'block';
+                } else {
+                    html.setAttribute('data-bs-theme', 'light');
+                    sunIcon.style.display = 'block';
+                    moonIcon.style.display = 'none';
+                }
+            })
+            .catch(error => console.error('Error toggling dark mode:', error));
+        });
+
+        // User dropdown toggle
+        document.getElementById('userDropdown')?.querySelector('.user-dropdown-toggle').addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.getElementById('userDropdown').classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // Close dropdown when clicking a menu item
+        document.querySelectorAll('.user-dropdown-menu .dropdown-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.getElementById('userDropdown').classList.remove('show');
+            });
+        });
+    </script>
+</body>
+</html>

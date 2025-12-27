@@ -1,0 +1,356 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}{{ claim.claim_number }} - Claims Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ claim.claim_number }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if can_edit %}
+        <a href="{% url 'claim_update' claim.pk %}" class="btn btn-warning me-2">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        {% endif %}
+        {% if can_delete %}
+        <a href="{% url 'claim_delete' claim.pk %}" class="btn btn-danger">
+            <i class="bi bi-trash"></i> Delete
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Details -->
+    <div class="col-md-8">
+        <!-- Voyage Information -->
+        <div class="card mb-3 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-ship"></i> Voyage Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Voyage Number:</strong></div>
+                    <div class="col-md-8">
+                        <a href="{% url 'voyage_detail' claim.voyage.pk %}" class="text-primary">
+                            <strong>{{ claim.voyage.voyage_number }}</strong>
+                        </a>
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Vessel Name:</strong></div>
+                    <div class="col-md-8">{{ claim.voyage.vessel_name }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Ship Owner:</strong></div>
+                    <div class="col-md-8">
+                        <strong>{{ claim.ship_owner.name }}</strong>
+                        {% if claim.ship_owner.code %}
+                        <span class="badge bg-secondary">{{ claim.ship_owner.code }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Route:</strong></div>
+                    <div class="col-md-8">{{ claim.voyage.load_port }} → {{ claim.voyage.discharge_port }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Laycan:</strong></div>
+                    <div class="col-md-8">{{ claim.voyage.laycan_start|date:"Y-m-d" }} to {{ claim.voyage.laycan_end|date:"Y-m-d" }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Charter Party:</strong></div>
+                    <div class="col-md-8">{{ claim.voyage.charter_party|default:"-" }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Claim Details -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Claim Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Claim Type:</strong></div>
+                    <div class="col-md-8">
+                        {{ claim.get_claim_type_display }}
+                        {% if claim.cost_type %}
+                        <br><small class="text-muted">Cost Type: {{ claim.get_cost_type_display }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Status:</strong></div>
+                    <div class="col-md-8"><span class="status-badge status-{{ claim.status }}">{{ claim.get_status_display }}</span></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Claim Amount:</strong></div>
+                    <div class="col-md-8"><strong class="text-primary">{{ claim.currency }} {{ claim.claim_amount|floatformat:2 }}</strong></div>
+                </div>
+                {% if claim.radar_claim_id %}
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>RADAR Claim ID:</strong></div>
+                    <div class="col-md-8"><code>{{ claim.radar_claim_id }}</code></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Payment Information -->
+        <div class="card mb-3 {% if claim.is_time_barred %}border-danger{% elif claim.outstanding_amount > 0 %}border-warning{% else %}border-success{% endif %}">
+            <div class="card-header {% if claim.is_time_barred %}bg-danger text-white{% elif claim.outstanding_amount > 0 %}bg-warning{% else %}bg-success text-white{% endif %}">
+                <h5 class="mb-0"><i class="bi bi-credit-card"></i> Payment Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Payment Status:</strong></div>
+                    <div class="col-md-8">
+                        <span class="badge bg-{% if claim.payment_status == 'PAID' %}success{% elif claim.payment_status == 'TIMEBAR' %}danger{% elif claim.payment_status == 'SENT' %}info{% elif claim.payment_status == 'PARTIALLY_PAID' %}warning{% else %}secondary{% endif %} fs-6">
+                            {{ claim.get_payment_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Claim Amount:</strong></div>
+                    <div class="col-md-8">{{ claim.currency }} {{ claim.claim_amount|floatformat:2 }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Paid Amount:</strong></div>
+                    <div class="col-md-8 text-success">{{ claim.currency }} {{ claim.paid_amount|floatformat:2 }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Outstanding:</strong></div>
+                    <div class="col-md-8 {% if claim.outstanding_amount > 0 %}text-danger fw-bold{% else %}text-success{% endif %}">
+                        {{ claim.currency }} {{ claim.outstanding_amount|floatformat:2 }}
+                    </div>
+                </div>
+                {% if claim.claim_deadline %}
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Claim Deadline:</strong></div>
+                    <div class="col-md-8">
+                        {{ claim.claim_deadline|date:"Y-m-d" }}
+                        {% if claim.days_until_deadline and claim.days_until_deadline <= 7 and claim.days_until_deadline >= 0 %}
+                        <span class="badge bg-warning text-dark ms-2">{{ claim.days_until_deadline }} days left</span>
+                        {% elif claim.days_until_deadline and claim.days_until_deadline < 0 %}
+                        <span class="badge bg-danger ms-2">Overdue by {{ claim.days_until_deadline|add:"-1" }} days</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if claim.is_time_barred %}
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Timebar Status:</strong></div>
+                    <div class="col-md-8">
+                        <span class="badge bg-danger fs-6">
+                            <i class="bi bi-exclamation-triangle"></i> TIME-BARRED
+                        </span>
+                        {% if claim.time_bar_date %}
+                        <br><small class="text-muted">Time-barred on {{ claim.time_bar_date|date:"Y-m-d" }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Calculation Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Demurrage Rate:</strong></div>
+                    <div class="col-md-8">{{ claim.currency }} {{ claim.demurrage_rate|floatformat:2 }} per day</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Laytime Allowed:</strong></div>
+                    <div class="col-md-8">{{ claim.laytime_allowed|floatformat:2 }} days</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Laytime Used:</strong></div>
+                    <div class="col-md-8">{{ claim.laytime_used|floatformat:2 }} days</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Demurrage Days:</strong></div>
+                    <div class="col-md-8"><strong class="text-danger">{{ claim.demurrage_days|floatformat:2 }} days</strong></div>
+                </div>
+            </div>
+        </div>
+
+        {% if claim.description %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Description</h5>
+            </div>
+            <div class="card-body">
+                {{ claim.description|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Comments Section -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Comments ({{ comments.count }})</h5>
+            </div>
+            <div class="card-body">
+                {% for comment in comments %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ comment.user.get_full_name|default:comment.user.username }}</strong>
+                        <small class="text-muted">{{ comment.created_at|date:"Y-m-d H:i" }}</small>
+                    </div>
+                    <p class="mt-2 mb-0">{{ comment.content|linebreaks }}</p>
+                </div>
+                {% empty %}
+                <p class="text-muted">No comments yet</p>
+                {% endfor %}
+
+                <form method="post" action="{% url 'add_comment' claim.pk %}" class="mt-3">
+                    {% csrf_token %}
+                    {{ comment_form.content }}
+                    <button type="submit" class="btn btn-primary mt-2">Add Comment</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Documents Section -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Documents ({{ documents.count }})</h5>
+            </div>
+            <div class="card-body">
+                {% if documents %}
+                <div class="list-group mb-3">
+                    {% for doc in documents %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ doc.title }}</h6>
+                                <small class="text-muted">{{ doc.get_document_type_display }} - Uploaded by {{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.username }} on {{ doc.uploaded_at|date:"Y-m-d" }}</small>
+                            </div>
+                            <a href="{{ doc.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="bi bi-download"></i> Download
+                            </a>
+                        </div>
+                        {% if doc.description %}
+                        <p class="mt-2 mb-0 small">{{ doc.description }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No documents uploaded</p>
+                {% endif %}
+
+                {% if can_edit %}
+                <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#uploadForm">
+                    <i class="bi bi-upload"></i> Upload Document
+                </button>
+                <div class="collapse mt-3" id="uploadForm">
+                    <form method="post" action="{% url 'add_document' claim.pk %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label">Title</label>
+                            {{ document_form.title }}
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Type</label>
+                            {{ document_form.document_type }}
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">File</label>
+                            {{ document_form.file }}
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Description</label>
+                            {{ document_form.description }}
+                        </div>
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <!-- Status & Payment Update -->
+        {% if can_edit %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Update Status & Payment</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'claim_status_update' claim.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label class="form-label">Claim Status</label>
+                        <select name="status" class="form-select">
+                            {% for value, label in claim.STATUS_CHOICES %}
+                            <option value="{{ value }}" {% if claim.status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Payment Status</label>
+                        <select name="payment_status" class="form-select">
+                            {% for value, label in claim.PAYMENT_STATUS_CHOICES %}
+                            <option value="{{ value }}" {% if claim.payment_status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Paid Amount ({{ claim.currency }})</label>
+                        <input type="number" name="paid_amount" step="0.01" class="form-control" value="{{ claim.paid_amount }}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Settlement Notes</label>
+                        <textarea name="settlement_notes" class="form-control" rows="3">{{ claim.settlement_notes }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Update</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Metadata -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <small class="text-muted">Created By</small>
+                    <p>{{ claim.created_by.get_full_name|default:claim.created_by.username }}</p>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Assigned To</small>
+                    <p>{% if claim.assigned_to %}{{ claim.assigned_to.get_full_name|default:claim.assigned_to.username }}{% else %}Not assigned{% endif %}</p>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Created At</small>
+                    <p>{{ claim.created_at|date:"Y-m-d H:i" }}</p>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Last Updated</small>
+                    <p>{{ claim.updated_at|date:"Y-m-d H:i" }}</p>
+                </div>
+                {% if claim.submitted_at %}
+                <div class="mb-2">
+                    <small class="text-muted">Submitted At</small>
+                    <p>{{ claim.submitted_at|date:"Y-m-d H:i" }}</p>
+                </div>
+                {% endif %}
+                {% if claim.settled_at %}
+                <div class="mb-2">
+                    <small class="text-muted">Settled At</small>
+                    <p>{{ claim.settled_at|date:"Y-m-d H:i" }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

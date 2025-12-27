@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m venv:*)",
+      "Bash(venvScriptsactivate)",
+      "Bash(pip install:*)",
+      "Bash(./venv/Scripts/pip install:*)",
+      "Bash(./venv/Scripts/django-admin:*)",
+      "Bash(./venv/Scripts/python:*)",
+      "Bash(mkdir:*)",
+      "Bash(./venv/Scripts/pip:*)",
+      "Bash(del db.sqlite3)",
+      "Bash(del claimsmigrations0001_initial.py)",
+      "Bash(curl:*)",
+      "Bash(.\\\\venv\\\\Scripts\\\\pip install:*)",
+      "Bash(.\\\\venv\\\\Scripts\\\\python:*)",
+      "Bash(.\\\\\\\\venv\\\\\\\\Scripts\\\\\\\\python manage.py collectstatic:*)",
+      "Bash(.\\\\\\\\venv\\\\\\\\Scripts\\\\\\\\python:*)",
+      "Bash(ls:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

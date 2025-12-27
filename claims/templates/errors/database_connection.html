@@ -1,0 +1,77 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}Database Connection Error - Claims Management System{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> {{ error_type }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- User-Friendly Message -->
+                    <div class="alert alert-danger" role="alert">
+                        <h5 class="alert-heading">{{ error_message }}</h5>
+                        <p class="mb-0">{{ user_message }}</p>
+                    </div>
+
+                    <!-- Impact Statement -->
+                    <div class="mb-4">
+                        <h6><strong>Impact:</strong></h6>
+                        <p class="text-muted">{{ impact }}</p>
+                    </div>
+
+                    <!-- What to Do -->
+                    <div class="mb-4">
+                        <h6><strong>What you can do:</strong></h6>
+                        <ul>
+                            {% for action in actions %}
+                            <li>{{ action }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="d-flex gap-2">
+                        <button onclick="location.reload()" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise"></i> Try Again
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-house"></i> Go to Dashboard
+                        </a>
+                        <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </a>
+                    </div>
+
+                    <!-- Technical Details (for admins only) -->
+                    {% if technical_details %}
+                    <div class="mt-4 pt-3 border-top">
+                        <details>
+                            <summary class="text-muted" style="cursor: pointer;">
+                                <small><i class="bi bi-code-slash"></i> Technical Details (Admin Only)</small>
+                            </summary>
+                            <pre class="mt-2 p-3 bg-light border rounded"><code>{{ technical_details }}</code></pre>
+                        </details>
+                    </div>
+                    {% endif %}
+
+                    <!-- Support Contact -->
+                    <div class="mt-4 pt-3 border-top">
+                        <p class="text-muted mb-0">
+                            <small>
+                                <i class="bi bi-info-circle"></i>
+                                If this problem persists, please contact IT Support with error code: <strong>DB-CONN-503</strong>
+                            </small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

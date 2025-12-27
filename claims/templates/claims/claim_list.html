@@ -1,0 +1,134 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}Claims List - Claims Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Claims</h1>
+    {% if user.can_write %}
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'claim_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Claim
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Claim number, vessel, voyage..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Type</label>
+                <select name="claim_type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for value, label in type_choices %}
+                    <option value="{{ value }}" {% if request.GET.claim_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Claims Table -->
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>Claim Number</th>
+                <th>Vessel / Voyage</th>
+                <th>Ship Owner</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Payment Status</th>
+                <th>Claim Amount</th>
+                <th>Outstanding</th>
+                <th>Assigned To</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for claim in claims %}
+            <tr class="{% if claim.is_time_barred %}table-danger{% endif %}">
+                <td>
+                    <strong>{{ claim.claim_number }}</strong>
+                    {% if claim.is_time_barred %}
+                    <br><span class="badge bg-danger" title="Time-barred claim">
+                        <i class="bi bi-exclamation-triangle"></i> TIMEBAR
+                    </span>
+                    {% elif claim.days_until_deadline and claim.days_until_deadline <= 7 and claim.days_until_deadline >= 0 %}
+                    <br><span class="badge bg-warning text-dark" title="{{ claim.days_until_deadline }} days until deadline">
+                        <i class="bi bi-clock"></i> {{ claim.days_until_deadline }}d
+                    </span>
+                    {% endif %}
+                </td>
+                <td>
+                    <strong>{{ claim.voyage.vessel_name }}</strong>
+                    <br><small class="text-muted">{{ claim.voyage.voyage_number }}</small>
+                </td>
+                <td>
+                    {{ claim.ship_owner.name }}
+                    {% if claim.ship_owner.code %}
+                    <br><small class="text-muted">{{ claim.ship_owner.code }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ claim.get_claim_type_display }}</td>
+                <td><span class="status-badge status-{{ claim.status }}">{{ claim.get_status_display }}</span></td>
+                <td>
+                    <span class="badge bg-{% if claim.payment_status == 'PAID' %}success{% elif claim.payment_status == 'TIMEBAR' %}danger{% elif claim.payment_status == 'SENT' %}info{% elif claim.payment_status == 'PARTIALLY_PAID' %}warning{% else %}secondary{% endif %}">
+                        {{ claim.get_payment_status_display }}
+                    </span>
+                </td>
+                <td>{{ claim.currency }} {{ claim.claim_amount|floatformat:2 }}</td>
+                <td>
+                    {% if claim.outstanding_amount > 0 %}
+                    <span class="text-danger fw-bold">{{ claim.currency }} {{ claim.outstanding_amount|floatformat:2 }}</span>
+                    {% else %}
+                    <span class="text-success">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if claim.assigned_to %}
+                    {{ claim.assigned_to.get_full_name|default:claim.assigned_to.username }}
+                    {% else %}
+                    <span class="text-muted">Unassigned</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'claim_detail' claim.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    {% if user.can_write or user.is_admin_role %}
+                    <a href="{% url 'claim_update' claim.pk %}" class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="10" class="text-center">No claims found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

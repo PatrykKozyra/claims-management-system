@@ -1,0 +1,190 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}{{ profile_user.get_full_name|default:profile_user.username }} - Profile{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">User Profile</h1>
+    {% if user == profile_user or user.is_admin_role %}
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'user_profile_edit' profile_user.id %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> Edit Profile
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row">
+    <!-- Profile Information -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-body text-center">
+                {% if profile_user.profile_photo %}
+                <img src="{{ profile_user.profile_photo.url }}" class="profile-photo-large mb-3" alt="{{ profile_user.get_full_name }}">
+                {% else %}
+                <i class="bi bi-person-circle" style="font-size: 150px;"></i>
+                {% endif %}
+                <h3>{{ profile_user.get_full_name|default:profile_user.username }}</h3>
+                {% if profile_user.position %}
+                <p class="text-muted">{{ profile_user.position }}</p>
+                {% endif %}
+                <p><span class="badge bg-primary">{{ profile_user.get_role_display }}</span></p>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Contact Information</h5>
+            </div>
+            <div class="card-body">
+                <p><i class="bi bi-envelope"></i> <strong>Email:</strong><br>{{ profile_user.email|default:"-" }}</p>
+                {% if profile_user.phone %}
+                <p><i class="bi bi-telephone"></i> <strong>Phone:</strong><br>{{ profile_user.phone }}</p>
+                {% endif %}
+                {% if profile_user.department %}
+                <p><i class="bi bi-building"></i> <strong>Department:</strong><br>{{ profile_user.department }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Account Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Username:</strong> {{ profile_user.username }}</p>
+                <p><strong>Permission Level:</strong><br>
+                    <span class="badge bg-info">{{ profile_user.get_role_display }}</span>
+                </p>
+                <p><strong>Created:</strong><br>{{ profile_user.date_joined|date:"Y-m-d H:i" }}</p>
+                {% if profile_user.created_by %}
+                <p><strong>Created By:</strong><br>
+                    <a href="{% url 'user_profile' profile_user.created_by.id %}" class="user-link">
+                        {{ profile_user.created_by.get_full_name|default:profile_user.created_by.username }}
+                    </a>
+                </p>
+                {% endif %}
+                <p><strong>Last Login:</strong><br>{{ profile_user.last_login|date:"Y-m-d H:i"|default:"Never" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics and Activity -->
+    <div class="col-md-8">
+        {% if profile_user.bio %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">About</h5>
+            </div>
+            <div class="card-body">
+                <p>{{ profile_user.bio|linebreaks }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Statistics Cards -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Assigned Voyages</h6>
+                        <h2 class="text-primary">{{ assigned_voyages_count }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-info">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Total Claims</h6>
+                        <h2 class="text-info">{{ total_claims }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Claims Closed</h6>
+                        <h2 class="text-success">{{ closed_claims_count }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Voyages -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Voyages</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_voyages %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Voyage Number</th>
+                                <th>Vessel</th>
+                                <th>Ship Owner</th>
+                                <th>Assigned</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for voyage in recent_voyages %}
+                            <tr>
+                                <td><a href="{% url 'voyage_detail' voyage.pk %}">{{ voyage.voyage_number }}</a></td>
+                                <td>{{ voyage.vessel_name }}</td>
+                                <td>{{ voyage.ship_owner.name }}</td>
+                                <td>{{ voyage.assigned_at|date:"Y-m-d" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No voyages assigned yet</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Claims -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Claims Activity</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_claims %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Claim Number</th>
+                                <th>Vessel</th>
+                                <th>Type</th>
+                                <th>Payment Status</th>
+                                <th>Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for claim in recent_claims %}
+                            <tr>
+                                <td><a href="{% url 'claim_detail' claim.pk %}">{{ claim.claim_number }}</a></td>
+                                <td>{{ claim.voyage.vessel_name }}</td>
+                                <td>{{ claim.get_claim_type_display }}</td>
+                                <td>
+                                    <span class="badge bg-{% if claim.payment_status == 'PAID' %}success{% elif claim.payment_status == 'TIMEBAR' %}danger{% elif claim.payment_status == 'SENT' %}info{% elif claim.payment_status == 'PARTIALLY_PAID' %}warning{% else %}secondary{% endif %}">
+                                        {{ claim.get_payment_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ claim.updated_at|date:"Y-m-d" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No claims assigned yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

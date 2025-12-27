@@ -1,0 +1,307 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}Analytics Dashboard - Claims Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-graph-up"></i> Analytics Dashboard</h1>
+</div>
+
+<!-- Filter Controls -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-funnel"></i> Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Ship Owner</label>
+                <select name="owner" class="form-select">
+                    <option value="">All Owners</option>
+                    {% for owner in ship_owners %}
+                    <option value="{{ owner.id }}" {% if filters.owner == owner.id|stringformat:"s" %}selected{% endif %}>
+                        {{ owner.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Analyst</label>
+                <select name="analyst" class="form-select">
+                    <option value="">All Analysts</option>
+                    <option value="me" {% if filters.analyst == 'me' %}selected{% endif %}>My Claims</option>
+                    {% for analyst in analysts %}
+                    <option value="{{ analyst.id }}" {% if filters.analyst == analyst.id|stringformat:"s" %}selected{% endif %}>
+                        {{ analyst.get_full_name|default:analyst.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Payment Status</label>
+                <select name="payment" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="NOT_SENT" {% if filters.payment == 'NOT_SENT' %}selected{% endif %}>Not Sent</option>
+                    <option value="SENT" {% if filters.payment == 'SENT' %}selected{% endif %}>Sent</option>
+                    <option value="PARTIALLY_PAID" {% if filters.payment == 'PARTIALLY_PAID' %}selected{% endif %}>Partially Paid</option>
+                    <option value="PAID" {% if filters.payment == 'PAID' %}selected{% endif %}>Paid</option>
+                    <option value="TIMEBAR" {% if filters.payment == 'TIMEBAR' %}selected{% endif %}>Timebar</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Timebar Status</label>
+                <select name="timebar" class="form-select">
+                    <option value="">All</option>
+                    <option value="yes" {% if filters.timebar == 'yes' %}selected{% endif %}>Time-barred Only</option>
+                    <option value="no" {% if filters.timebar == 'no' %}selected{% endif %}>Active Only</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Overall Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Total Claims</h6>
+                <h2 class="text-primary">{{ overall_stats.total_claims|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Total Value</h6>
+                <h2 class="text-success">{{ overall_stats.total_value|floatformat:0|default:0 }} USD</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Total Outstanding</h6>
+                <h2 class="text-warning">{{ overall_stats.total_outstanding|floatformat:0|default:0 }} USD</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Time-barred Claims</h6>
+                <h2 class="text-danger">{{ overall_stats.time_barred_count|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Status Breakdown -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-credit-card"></i> Payment Status Breakdown</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Payment Status</th>
+                        <th class="text-end">Count</th>
+                        <th class="text-end">Total Value</th>
+                        <th class="text-end">% of Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in payment_breakdown %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-{% if stat.payment_status == 'PAID' %}success{% elif stat.payment_status == 'TIMEBAR' %}danger{% elif stat.payment_status == 'SENT' %}info{% elif stat.payment_status == 'PARTIALLY_PAID' %}warning{% else %}secondary{% endif %}">
+                                {{ stat.status_display }}
+                            </span>
+                        </td>
+                        <td class="text-end">{{ stat.count }}</td>
+                        <td class="text-end">{{ stat.total_value|floatformat:2|default:0 }} USD</td>
+                        <td class="text-end">
+                            {% if overall_stats.total_value > 0 %}
+                            {{ stat.percentage|floatformat:1 }}%
+                            {% else %}
+                            0%
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">No data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- By Ship Owner Statistics -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-building"></i> Statistics by Ship Owner</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Ship Owner</th>
+                        <th class="text-end">Total Claims</th>
+                        <th class="text-end">Total Value</th>
+                        <th class="text-end">Total Paid</th>
+                        <th class="text-end">Outstanding</th>
+                        <th class="text-end">Time-barred</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in owner_stats %}
+                    <tr>
+                        <td>
+                            <strong>{{ stat.ship_owner__name }}</strong>
+                            {% if stat.ship_owner__code %}
+                            <br><small class="text-muted">{{ stat.ship_owner__code }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ stat.total_claims }}</td>
+                        <td class="text-end">{{ stat.total_value|floatformat:2|default:0 }} USD</td>
+                        <td class="text-end text-success">{{ stat.total_paid|floatformat:2|default:0 }} USD</td>
+                        <td class="text-end {% if stat.total_outstanding > 0 %}text-danger fw-bold{% endif %}">
+                            {{ stat.total_outstanding|floatformat:2|default:0 }} USD
+                        </td>
+                        <td class="text-end">
+                            {% if stat.time_barred_count > 0 %}
+                            <span class="badge bg-danger">{{ stat.time_barred_count }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- By Analyst Statistics -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-person-badge"></i> Statistics by Analyst</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Analyst</th>
+                        <th class="text-end">Total Claims</th>
+                        <th class="text-end">Total Value</th>
+                        <th class="text-end">Outstanding</th>
+                        <th class="text-end">Time-barred</th>
+                        <th class="text-end">Avg Claim Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in analyst_stats %}
+                    <tr>
+                        <td>
+                            {{ stat.analyst_name }}
+                        </td>
+                        <td class="text-end">{{ stat.total_claims }}</td>
+                        <td class="text-end">{{ stat.total_value|floatformat:2|default:0 }} USD</td>
+                        <td class="text-end {% if stat.total_outstanding > 0 %}text-danger fw-bold{% endif %}">
+                            {{ stat.total_outstanding|floatformat:2|default:0 }} USD
+                        </td>
+                        <td class="text-end">
+                            {% if stat.time_barred_count > 0 %}
+                            <span class="badge bg-danger">{{ stat.time_barred_count }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ stat.avg_value|floatformat:2|default:0 }} USD</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- By Vessel Statistics (Top 20) -->
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="bi bi-ship"></i> Top 20 Vessels by Claim Value</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Vessel Name</th>
+                        <th class="text-end">Claims Count</th>
+                        <th class="text-end">Total Value</th>
+                        <th class="text-end">Outstanding</th>
+                        <th class="text-end">Avg per Claim</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in vessel_stats %}
+                    <tr>
+                        <td><strong>{{ stat.voyage__vessel_name }}</strong></td>
+                        <td class="text-end">{{ stat.total_claims }}</td>
+                        <td class="text-end">{{ stat.total_value|floatformat:2|default:0 }} USD</td>
+                        <td class="text-end {% if stat.total_outstanding > 0 %}text-danger fw-bold{% endif %}">
+                            {{ stat.total_outstanding|floatformat:2|default:0 }} USD
+                        </td>
+                        <td class="text-end">{{ stat.avg_value|floatformat:2|default:0 }} USD</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Export Section -->
+<div class="card mb-4">
+    <div class="card-body text-center">
+        <h5>Export Analytics Data</h5>
+        <p class="text-muted">Download the current filtered data as an Excel file</p>
+        <a href="{% url 'export_claims' %}?{{ request.GET.urlencode }}" class="btn btn-success">
+            <i class="bi bi-download"></i> Export to Excel
+        </a>
+    </div>
+</div>
+
+<div class="mt-3">
+    <p class="text-muted">
+        <i class="bi bi-info-circle"></i>
+        All amounts are displayed in USD. Statistics update in real-time based on applied filters.
+    </p>
+</div>
+{% endblock %}

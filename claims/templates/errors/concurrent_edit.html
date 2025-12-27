@@ -1,0 +1,100 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}Concurrent Edit Conflict - Claims Management System{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> {{ error_type }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- User-Friendly Message -->
+                    <div class="alert alert-warning" role="alert">
+                        <h5 class="alert-heading">{{ error_message }}</h5>
+                        <p class="mb-0">{{ user_message }}</p>
+                    </div>
+
+                    <!-- Visual Explanation -->
+                    <div class="mb-4 p-3 bg-light border rounded">
+                        <h6><strong>What happened?</strong></h6>
+                        <ol class="mb-0">
+                            <li>You opened this record to edit it</li>
+                            <li>Another user also edited the same record</li>
+                            <li>They saved their changes before you did</li>
+                            <li>Your changes were blocked to prevent data loss</li>
+                        </ol>
+                    </div>
+
+                    <!-- Impact Statement -->
+                    <div class="mb-4">
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-shield-check"></i>
+                            <strong>Good news:</strong> {{ impact }} This protects both your work and theirs.
+                        </div>
+                    </div>
+
+                    <!-- What to Do -->
+                    <div class="mb-4">
+                        <h6><strong>What to do now:</strong></h6>
+                        <div class="list-group">
+                            {% for action in actions %}
+                            <div class="list-group-item">
+                                <i class="bi bi-check-circle text-primary"></i> {{ action }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="d-flex gap-2">
+                        <button onclick="location.reload()" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise"></i> Reload Page
+                        </button>
+                        <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </a>
+                    </div>
+
+                    <!-- Prevention Tips -->
+                    <div class="mt-4 pt-3 border-top">
+                        <h6><strong>How to prevent this:</strong></h6>
+                        <ul class="text-muted mb-0">
+                            <li>Coordinate with your team before editing shared records</li>
+                            <li>Use the comments section to note you're working on a record</li>
+                            <li>Make changes quickly and save often</li>
+                            <li>Check if anyone else is viewing the same record</li>
+                        </ul>
+                    </div>
+
+                    <!-- Technical Details (for admins only) -->
+                    {% if technical_details %}
+                    <div class="mt-4 pt-3 border-top">
+                        <details>
+                            <summary class="text-muted" style="cursor: pointer;">
+                                <small><i class="bi bi-code-slash"></i> Technical Details (Admin Only)</small>
+                            </summary>
+                            <pre class="mt-2 p-3 bg-light border rounded"><code>{{ technical_details }}</code></pre>
+                        </details>
+                    </div>
+                    {% endif %}
+
+                    <!-- Support Contact -->
+                    <div class="mt-4 pt-3 border-top">
+                        <p class="text-muted mb-0">
+                            <small>
+                                <i class="bi bi-info-circle"></i>
+                                Error code: <strong>CONCURRENT-EDIT-409</strong>
+                            </small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

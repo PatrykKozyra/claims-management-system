@@ -1,0 +1,127 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}{{ title }} - Claims Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ title }}</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-10">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-ship"></i> Voyage Selection</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Select the voyage this claim is associated with. The ship owner will be automatically set from the voyage.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Voyage *</label>
+                        {{ form.voyage }}
+                        <small class="form-text text-muted">Select the voyage from RADAR system</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>Claim Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Claim Type *</label>
+                            {{ form.claim_type }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Cost Type</label>
+                            {{ form.cost_type }}
+                            <small class="form-text text-muted">Required for Post-Deal claims</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            {{ form.status }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Payment Status</label>
+                            {{ form.payment_status }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Assigned To</label>
+                            {{ form.assigned_to }}
+                            <small class="form-text text-muted">Auto-assigned from voyage if not set</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Claim Deadline</label>
+                            {{ form.claim_deadline }}
+                            <small class="form-text text-muted">Contractual submission deadline</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>Financial Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Laytime Used (hours)</label>
+                            {{ form.laytime_used }}
+                            <small class="form-text text-muted">For demurrage claims</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Currency *</label>
+                            {{ form.currency }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Claim Amount *</label>
+                            {{ form.claim_amount }}
+                            <small class="form-text text-muted">Total claim amount</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Paid Amount</label>
+                            {{ form.paid_amount }}
+                            <small class="form-text text-muted">Amount received so far</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>Additional Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        {{ form.description }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Internal Notes</label>
+                        {{ form.internal_notes }}
+                        <small class="form-text text-muted">Private notes for internal use only</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a href="{% if claim %}{% url 'claim_detail' claim.pk %}{% else %}{% url 'claim_list' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Claim</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

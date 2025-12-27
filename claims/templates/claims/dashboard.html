@@ -1,0 +1,133 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}Dashboard - Claims Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Total Claims</h5>
+                <h2>{{ stats.total_claims }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h5 class="card-title">Draft</h5>
+                <h2>{{ stats.draft_claims }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">Under Review</h5>
+                <h2>{{ stats.under_review }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Settled</h5>
+                <h2>{{ stats.settled }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Voyage & Payment Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h6 class="text-muted">My Voyages</h6>
+                <h3 class="text-info">{{ stats.my_voyages|default:0 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Unassigned Voyages</h6>
+                <h3 class="text-danger">{{ stats.unassigned_voyages|default:0 }}</h3>
+                {% if stats.unassigned_voyages > 0 %}
+                <a href="{% url 'voyage_list' %}?status=UNASSIGNED" class="btn btn-sm btn-danger mt-2">
+                    Assign Now
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Outstanding Amount</h6>
+                <h3 class="text-warning">{{ stats.total_outstanding|floatformat:0|default:0 }} USD</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Time-barred Claims</h6>
+                <h3 class="text-danger">{{ stats.time_barred_count|default:0 }}</h3>
+                {% if stats.time_barred_count > 0 %}
+                <small class="text-muted">Requires attention</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- My Claims -->
+<div class="row">
+    <div class="col-12">
+        <h3>My Recent Claims</h3>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Claim Number</th>
+                        <th>Vessel Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Claim Amount</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for claim in my_claims %}
+                    <tr>
+                        <td>{{ claim.claim_number }}</td>
+                        <td>{{ claim.voyage.vessel_name }}</td>
+                        <td>{{ claim.get_claim_type_display }}</td>
+                        <td><span class="status-badge status-{{ claim.status }}">{{ claim.get_status_display }}</span></td>
+                        <td>{{ claim.currency }} {{ claim.claim_amount|floatformat:2 }}</td>
+                        <td>{{ claim.created_at|date:"Y-m-d" }}</td>
+                        <td>
+                            <a href="{% url 'claim_detail' claim.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No claims found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="text-center mt-3">
+            <a href="{% url 'claim_list' %}" class="btn btn-outline-primary">View All Claims</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
