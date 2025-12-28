@@ -18,7 +18,15 @@
       "Bash(.\\\\\\\\venv\\\\\\\\Scripts\\\\\\\\python:*)",
       "Bash(ls:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git config:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(.\\\\venv\\\\Scripts\\\\python.exe:*)",
+      "Bash(./venv/Scripts/python.exe manage.py check:*)",
+      "Bash(./venv/Scripts/python.exe:*)"
     ]
   }
 }

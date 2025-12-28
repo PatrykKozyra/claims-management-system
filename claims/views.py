@@ -4,12 +4,28 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Q, Count, Sum, Avg, F, Case, When
+from django.db import transaction
 from django.utils import timezone
+from datetime import datetime
+from decimal import Decimal
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
-from .models import Claim, Comment, Document, User, Voyage, ShipOwner
+from .models import Claim, Comment, Document, User, Voyage, ShipOwner, ClaimActivityLog
 from .forms import (ClaimForm, CommentForm, DocumentForm, ClaimStatusForm,
                     UserRegistrationForm, UserProfileEditForm, AdminUserEditForm)
+
+
+def log_claim_activity(claim, user, action, message, old_value='', new_value=''):
+    """Helper function to create activity log entries"""
+    ClaimActivityLog.objects.create(
+        claim=claim,
+        claim_number=claim.claim_number,
+        user=user,
+        action=action,
+        message=message,
+        old_value=old_value,
+        new_value=new_value
+    )
 
 
 def login_view(request):
@@ -159,11 +175,18 @@ def voyage_detail(request, pk):
         is_active=True
     ).order_by('first_name', 'last_name')
 
+    # Get assignment history
+    from .models import VoyageAssignment
+    assignment_history = voyage.assignment_history.select_related(
+        'assigned_to', 'assigned_by'
+    ).order_by('-assigned_at')
+
     context = {
         'voyage': voyage,
         'claims': claims,
         'can_assign': request.user.can_write(),
         'analysts': analysts,
+        'assignment_history': assignment_history,
     }
 
     return render(request, 'claims/voyage_detail.html', context)
@@ -179,8 +202,9 @@ def voyage_assign(request, pk):
     voyage = get_object_or_404(Voyage, pk=pk)
 
     if request.method == 'POST':
-        # Assign to self
-        voyage.assign_to(request.user)
+        # Assign to self - wrapped in transaction for data consistency
+        with transaction.atomic():
+            voyage.assign_to(analyst=request.user, assigned_by=request.user)
         messages.success(request, f'Voyage {voyage.voyage_number} assigned to you. All claims have been auto-assigned.')
         return redirect('voyage_detail', pk=pk)
 
@@ -209,7 +233,9 @@ def voyage_assign_to(request, pk):
             messages.error(request, f'{analyst.get_full_name()} does not have permission to handle claims')
             return redirect('voyage_list')
 
-        voyage.assign_to(analyst)
+        # Wrapped in transaction for data consistency
+        with transaction.atomic():
+            voyage.assign_to(analyst=analyst, assigned_by=request.user)
         messages.success(request, f'Voyage {voyage.voyage_number} assigned to {analyst.get_full_name()}. All claims have been auto-assigned.')
         return redirect('voyage_list')
 
@@ -247,17 +273,29 @@ def voyage_reassign(request, pk):
 
         old_analyst = voyage.assigned_analyst
 
-        # Reassign voyage and all claims
-        voyage.assign_to(new_analyst)
+        # Reassign voyage and all claims, add comments - all in one transaction
+        with transaction.atomic():
+            # Reassign voyage and all claims
+            voyage.assign_to(analyst=new_analyst, assigned_by=request.user)
 
-        # Add a comment to all claims about the reassignment
-        if reassignment_reason:
-            for claim in voyage.claims.all():
-                Comment.objects.create(
-                    claim=claim,
-                    user=request.user,
-                    content=f'Reassigned from {old_analyst.get_full_name() if old_analyst else "Unassigned"} to {new_analyst.get_full_name()}. Reason: {reassignment_reason}'
-                )
+            # Update the assignment history record with reassignment reason
+            if reassignment_reason:
+                from .models import VoyageAssignment
+                latest_assignment = VoyageAssignment.objects.filter(
+                    voyage=voyage,
+                    is_active=True
+                ).first()
+                if latest_assignment:
+                    latest_assignment.reassignment_reason = reassignment_reason
+                    latest_assignment.save()
+
+                # Add a comment to all claims about the reassignment
+                for claim in voyage.claims.all():
+                    Comment.objects.create(
+                        claim=claim,
+                        user=request.user,
+                        content=f'Reassigned from {old_analyst.get_full_name() if old_analyst else "Unassigned"} to {new_analyst.get_full_name()}. Reason: {reassignment_reason}'
+                    )
 
         messages.success(request, f'Voyage {voyage.voyage_number} and all claims reassigned to {new_analyst.get_full_name()}')
         return redirect('voyage_detail', pk=pk)
@@ -616,11 +654,13 @@ def claim_detail(request, pk):
 
     comments = claim.comments.all().select_related('user')
     documents = claim.documents.all().select_related('uploaded_by')
+    activity_logs = claim.activity_logs.all().select_related('user').order_by('-created_at')
 
     context = {
         'claim': claim,
         'comments': comments,
         'documents': documents,
+        'activity_logs': activity_logs,
         'comment_form': CommentForm(),
         'document_form': DocumentForm(),
         'status_form': ClaimStatusForm(instance=claim),
@@ -640,10 +680,18 @@ def claim_create(request):
     if request.method == 'POST':
         form = ClaimForm(request.POST)
         if form.is_valid():
-            claim = form.save(commit=False)
-            claim.created_by = request.user
-            claim.ship_owner = claim.voyage.ship_owner  # Auto-set from voyage
-            claim.save()
+            with transaction.atomic():
+                claim = form.save(commit=False)
+                claim.created_by = request.user
+                claim.ship_owner = claim.voyage.ship_owner  # Auto-set from voyage
+                claim.save()
+
+                # Log claim creation
+                log_claim_activity(
+                    claim, request.user, 'CREATED',
+                    f'Claim created for {claim.voyage.vessel_name} ({claim.get_claim_type_display()})',
+                    new_value=f'{claim.claim_amount} {claim.currency}'
+                )
             messages.success(request, f'Claim {claim.claim_number} created successfully')
             return redirect('claim_detail', pk=claim.pk)
     else:
@@ -661,11 +709,42 @@ def claim_update(request, pk):
         return redirect('claim_detail', pk=pk)
 
     if request.method == 'POST':
+        # Get old values before update
+        old_claim_amount = claim.claim_amount
+        old_paid_amount = claim.paid_amount
+        old_deadline = claim.claim_deadline
+        old_assigned_to = claim.assigned_to
+
         form = ClaimForm(request.POST, instance=claim)
         if form.is_valid():
-            claim = form.save(commit=False)
-            claim.ship_owner = claim.voyage.ship_owner  # Ensure consistency
-            claim.save()
+            with transaction.atomic():
+                claim = form.save(commit=False)
+                claim.ship_owner = claim.voyage.ship_owner  # Ensure consistency
+                claim.save()
+
+                # Log significant changes
+                if old_claim_amount != claim.claim_amount:
+                    log_claim_activity(claim, request.user, 'AMOUNT_CHANGED', 'Claim amount changed',
+                        old_value=f'{old_claim_amount} {claim.currency}',
+                        new_value=f'{claim.claim_amount} {claim.currency}')
+
+                if old_paid_amount != claim.paid_amount:
+                    log_claim_activity(claim, request.user, 'PAID_AMOUNT_CHANGED', 'Paid amount updated',
+                        old_value=f'{old_paid_amount} {claim.currency}',
+                        new_value=f'{claim.paid_amount} {claim.currency}')
+
+                if old_deadline != claim.claim_deadline:
+                    log_claim_activity(claim, request.user, 'DEADLINE_CHANGED', 'Claim deadline changed',
+                        old_value=str(old_deadline) if old_deadline else 'None',
+                        new_value=str(claim.claim_deadline) if claim.claim_deadline else 'None')
+
+                if old_assigned_to != claim.assigned_to:
+                    action = 'REASSIGNED' if old_assigned_to else 'ASSIGNED'
+                    log_claim_activity(claim, request.user, action,
+                        f'Claim {"reassigned" if old_assigned_to else "assigned"}',
+                        old_value=old_assigned_to.get_full_name() if old_assigned_to else 'Unassigned',
+                        new_value=claim.assigned_to.get_full_name() if claim.assigned_to else 'Unassigned')
+
             messages.success(request, 'Claim updated successfully')
             return redirect('claim_detail', pk=pk)
     else:
@@ -683,7 +762,12 @@ def claim_delete(request, pk):
         return redirect('claim_detail', pk=pk)
 
     if request.method == 'POST':
-        claim.delete()
+        with transaction.atomic():
+            # Log deletion before deleting the claim
+            log_claim_activity(claim, request.user, 'DELETED',
+                f'Claim deleted',
+                old_value=f'{claim.get_claim_type_display()} - {claim.claim_amount} {claim.currency}')
+            claim.delete()
         messages.success(request, 'Claim deleted successfully')
         return redirect('claim_list')
 
@@ -699,23 +783,61 @@ def claim_status_update(request, pk):
         return redirect('claim_detail', pk=pk)
 
     if request.method == 'POST':
+        # Get old values before update
+        old_status = claim.status
+        old_payment_status = claim.payment_status
+
         form = ClaimStatusForm(request.POST, instance=claim)
         if form.is_valid():
-            claim = form.save(commit=False)
+            # Wrapped in transaction to ensure status + timestamp updates are atomic
+            with transaction.atomic():
+                claim = form.save(commit=False)
 
-            # Update timestamps based on status changes
-            if claim.status == 'SUBMITTED' and not claim.submitted_at:
-                claim.submitted_at = timezone.now()
-            elif claim.status == 'SETTLED' and not claim.settled_at:
-                claim.settled_at = timezone.now()
+                # Update timestamps based on status changes
+                if claim.status == 'SUBMITTED' and not claim.submitted_at:
+                    claim.submitted_at = timezone.now()
+                elif claim.status == 'SETTLED' and not claim.settled_at:
+                    claim.settled_at = timezone.now()
 
-            # Update payment timestamps
-            if claim.payment_status == 'SENT' and not claim.sent_to_owner_at:
-                claim.sent_to_owner_at = timezone.now()
-            elif claim.payment_status in ['PAID', 'PARTIALLY_PAID'] and not claim.paid_at:
-                claim.paid_at = timezone.now()
+                # Update payment timestamps
+                if claim.payment_status == 'SENT' and not claim.sent_to_owner_at:
+                    claim.sent_to_owner_at = timezone.now()
+                elif claim.payment_status in ['PAID', 'PARTIALLY_PAID'] and not claim.paid_at:
+                    claim.paid_at = timezone.now()
 
-            claim.save()
+                claim.save()
+
+                # Log status changes
+                if old_status != claim.status:
+                    ClaimActivityLog.objects.create(
+                        claim=claim,
+                        user=request.user,
+                        action='STATUS_CHANGED',
+                        message=f'Claim status changed',
+                        old_value=dict(Claim.STATUS_CHOICES).get(old_status, old_status),
+                        new_value=dict(Claim.STATUS_CHOICES).get(claim.status, claim.status)
+                    )
+
+                if old_payment_status != claim.payment_status:
+                    ClaimActivityLog.objects.create(
+                        claim=claim,
+                        user=request.user,
+                        action='PAYMENT_STATUS_CHANGED',
+                        message=f'Payment status changed',
+                        old_value=dict(Claim.PAYMENT_STATUS_CHOICES).get(old_payment_status, old_payment_status),
+                        new_value=dict(Claim.PAYMENT_STATUS_CHOICES).get(claim.payment_status, claim.payment_status)
+                    )
+
+                    # Log if claim becomes time-barred
+                    if claim.payment_status == 'TIMEBAR' and old_payment_status != 'TIMEBAR':
+                        ClaimActivityLog.objects.create(
+                            claim=claim,
+                            user=request.user,
+                            action='TIME_BARRED',
+                            message=f'Claim marked as time-barred',
+                            new_value=str(claim.time_bar_date) if claim.time_bar_date else timezone.now().date().isoformat()
+                        )
+
             messages.success(request, 'Claim status updated successfully')
             return redirect('claim_detail', pk=pk)
 

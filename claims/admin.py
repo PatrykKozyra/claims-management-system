@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
-from .models import User, Claim, Comment, Document, Voyage, ShipOwner
+from .models import User, Claim, Comment, Document, Voyage, ShipOwner, VoyageAssignment, ClaimActivityLog
 
 
 @admin.register(User)
@@ -41,6 +41,14 @@ class ClaimInline(admin.TabularInline):
     can_delete = False
 
 
+class VoyageAssignmentInline(admin.TabularInline):
+    model = VoyageAssignment
+    extra = 0
+    fields = ['assigned_to', 'assigned_by', 'assigned_at', 'unassigned_at', 'is_active', 'reassignment_reason']
+    readonly_fields = ['assigned_at', 'unassigned_at']
+    can_delete = False
+
+
 @admin.register(Voyage)
 class VoyageAdmin(admin.ModelAdmin):
     list_display = [
@@ -49,9 +57,9 @@ class VoyageAdmin(admin.ModelAdmin):
     ]
     list_filter = ['assignment_status', 'ship_owner', 'assigned_analyst', 'created_at']
     search_fields = ['radar_voyage_id', 'voyage_number', 'vessel_name', 'imo_number', 'charter_party']
-    readonly_fields = ['radar_voyage_id', 'last_radar_sync', 'created_at', 'updated_at', 'assigned_at']
+    readonly_fields = ['radar_voyage_id', 'last_radar_sync', 'created_at', 'updated_at', 'assigned_at', 'version']
     date_hierarchy = 'created_at'
-    inlines = [ClaimInline]
+    inlines = [VoyageAssignmentInline, ClaimInline]
 
     fieldsets = (
         ('RADAR Information', {
@@ -95,6 +103,16 @@ class DocumentInline(admin.TabularInline):
     readonly_fields = ['uploaded_by', 'uploaded_at']
 
 
+class ClaimActivityLogInline(admin.TabularInline):
+    model = ClaimActivityLog
+    extra = 0
+    fields = ['action', 'user', 'message', 'old_value', 'new_value', 'created_at']
+    readonly_fields = ['action', 'user', 'message', 'old_value', 'new_value', 'created_at']
+    can_delete = False
+    max_num = 20
+    ordering = ['-created_at']
+
+
 @admin.register(Claim)
 class ClaimAdmin(admin.ModelAdmin):
     list_display = [
@@ -117,7 +135,7 @@ class ClaimAdmin(admin.ModelAdmin):
         'last_radar_sync'
     ]
     date_hierarchy = 'created_at'
-    inlines = [CommentInline, DocumentInline]
+    inlines = [ClaimActivityLogInline, CommentInline, DocumentInline]
 
     fieldsets = (
         ('Basic Information', {
@@ -182,3 +200,55 @@ class DocumentAdmin(admin.ModelAdmin):
     list_filter = ['document_type', 'uploaded_at']
     search_fields = ['title', 'claim__claim_number', 'description']
     readonly_fields = ['uploaded_at']
+
+
+@admin.register(VoyageAssignment)
+class VoyageAssignmentAdmin(admin.ModelAdmin):
+    list_display = ['voyage', 'assigned_to', 'assigned_by', 'assigned_at', 'unassigned_at', 'is_active', 'duration_days']
+    list_filter = ['is_active', 'assigned_at', 'assigned_to', 'assigned_by']
+    search_fields = ['voyage__voyage_number', 'voyage__vessel_name', 'assigned_to__username', 'assigned_by__username']
+    readonly_fields = ['assigned_at', 'unassigned_at', 'duration', 'duration_days']
+    date_hierarchy = 'assigned_at'
+
+    fieldsets = (
+        ('Assignment Details', {
+            'fields': ('voyage', 'assigned_to', 'assigned_by', 'is_active')
+        }),
+        ('Timestamps', {
+            'fields': ('assigned_at', 'unassigned_at', 'duration', 'duration_days')
+        }),
+        ('Reassignment Info', {
+            'fields': ('reassignment_reason',),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(ClaimActivityLog)
+class ClaimActivityLogAdmin(admin.ModelAdmin):
+    list_display = ['claim_number', 'action', 'user', 'message_preview', 'created_at']
+    list_filter = ['action', 'created_at', 'user']
+    search_fields = ['claim_number', 'claim__claim_number', 'message', 'user__username']
+    readonly_fields = ['claim', 'claim_number', 'user', 'action', 'message', 'old_value', 'new_value', 'created_at']
+    date_hierarchy = 'created_at'
+
+    fieldsets = (
+        ('Activity Details', {
+            'fields': ('claim', 'claim_number', 'user', 'action', 'created_at')
+        }),
+        ('Change Information', {
+            'fields': ('message', 'old_value', 'new_value')
+        }),
+    )
+
+    def message_preview(self, obj):
+        return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
+    message_preview.short_description = 'Message'
+
+    def has_add_permission(self, request):
+        # Activity logs should only be created programmatically
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of audit trail
+        return False

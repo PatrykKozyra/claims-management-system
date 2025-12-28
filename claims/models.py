@@ -73,6 +73,12 @@ class ShipOwner(models.Model):
 
     class Meta:
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),  # For search and lookups
+            models.Index(fields=['code']),  # For RADAR sync lookups
+            models.Index(fields=['is_active']),  # Filter active owners
+            models.Index(fields=['is_active', 'name']),  # Active owners list
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.code})"
@@ -137,6 +143,9 @@ class Voyage(models.Model):
     last_radar_sync = models.DateTimeField(auto_now=True)
     radar_data = models.JSONField(default=dict, blank=True, help_text="Raw data from RADAR")
 
+    # Concurrency Control (Optimistic Locking)
+    version = models.IntegerField(default=0, help_text="Version number for optimistic locking")
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -144,23 +153,118 @@ class Voyage(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
+            # Single-column indexes for lookups
             models.Index(fields=['radar_voyage_id']),
             models.Index(fields=['assignment_status']),
             models.Index(fields=['assigned_analyst']),
+            models.Index(fields=['ship_owner']),
+            models.Index(fields=['voyage_number']),  # For search and lookups
+            models.Index(fields=['vessel_name']),  # For search
+            models.Index(fields=['created_at']),  # For ordering and date filtering
+            models.Index(fields=['laycan_start']),  # For date range queries
+
+            # Composite indexes for common query patterns (SQL Server optimized)
+            models.Index(fields=['ship_owner', 'assignment_status']),  # Owner voyage list
+            models.Index(fields=['assigned_analyst', 'assignment_status']),  # Analyst workload
+            models.Index(fields=['assignment_status', 'created_at']),  # Unassigned voyages report
         ]
 
     def __str__(self):
         return f"{self.voyage_number} - {self.vessel_name}"
 
-    def assign_to(self, analyst):
-        """Assign voyage to analyst"""
+    def save(self, *args, **kwargs):
+        # Optimistic Locking: Check for concurrent modifications
+        if self.pk is not None:  # Only check for existing records
+            # Get the current version from database
+            current = Voyage.objects.filter(pk=self.pk).values('version').first()
+            if current and current['version'] != self.version:
+                from django.core.exceptions import ValidationError
+                raise ValidationError(
+                    "This voyage has been modified by another user. "
+                    "Please reload the page and try again."
+                )
+            # Increment version for next save
+            self.version += 1
+
+        super().save(*args, **kwargs)
+
+    def assign_to(self, analyst, assigned_by=None):
+        """Assign voyage to analyst and create assignment history record"""
+        # Store old assignment for history
+        old_analyst = self.assigned_analyst
+
+        # Update voyage assignment
         self.assigned_analyst = analyst
         self.assignment_status = 'ASSIGNED'
         self.assigned_at = timezone.now()
         self.save()
 
+        # Close previous active assignment if exists
+        if old_analyst:
+            VoyageAssignment.objects.filter(
+                voyage=self,
+                is_active=True
+            ).update(
+                is_active=False,
+                unassigned_at=timezone.now()
+            )
+
+        # Create new assignment history record
+        VoyageAssignment.objects.create(
+            voyage=self,
+            assigned_to=analyst,
+            assigned_by=assigned_by or analyst,  # If not specified, assume self-assignment
+            is_active=True
+        )
+
         # Update all existing claims for this voyage
         self.claims.filter(assigned_to__isnull=True).update(assigned_to=analyst)
+
+
+class VoyageAssignment(models.Model):
+    """Assignment history tracking for voyages - provides audit trail and reporting"""
+
+    voyage = models.ForeignKey(Voyage, on_delete=models.CASCADE, related_name='assignment_history')
+    assigned_to = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='voyage_assignments',
+        help_text="Analyst assigned to this voyage"
+    )
+    assigned_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='voyage_assignments_made',
+        help_text="Team lead or user who made the assignment"
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    unassigned_at = models.DateTimeField(null=True, blank=True, help_text="When this assignment ended")
+    is_active = models.BooleanField(default=True, help_text="Current active assignment")
+    reassignment_reason = models.TextField(blank=True, help_text="Reason for reassignment (if applicable)")
+
+    class Meta:
+        ordering = ['-assigned_at']
+        indexes = [
+            models.Index(fields=['voyage', 'is_active']),
+            models.Index(fields=['assigned_to', 'is_active']),
+            models.Index(fields=['assigned_at']),
+        ]
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Completed"
+        return f"{self.voyage.voyage_number} → {self.assigned_to.get_full_name()} ({status})"
+
+    @property
+    def duration(self):
+        """Calculate duration of assignment"""
+        if self.unassigned_at:
+            return self.unassigned_at - self.assigned_at
+        return timezone.now() - self.assigned_at
+
+    @property
+    def duration_days(self):
+        """Get duration in days"""
+        return self.duration.days
 
 
 class Claim(models.Model):
@@ -273,6 +377,7 @@ class Claim(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
+            # Single-column indexes for lookups
             models.Index(fields=['claim_number']),
             models.Index(fields=['radar_claim_id']),
             models.Index(fields=['status']),
@@ -281,6 +386,16 @@ class Claim(models.Model):
             models.Index(fields=['ship_owner']),
             models.Index(fields=['assigned_to']),
             models.Index(fields=['is_time_barred']),
+            models.Index(fields=['created_at']),  # For ordering and date filtering
+            models.Index(fields=['created_by']),  # For user's claims queries
+            models.Index(fields=['claim_deadline']),  # For deadline alerts
+
+            # Composite indexes for common query patterns (SQL Server optimized)
+            models.Index(fields=['assigned_to', 'status']),  # Analyst dashboard
+            models.Index(fields=['ship_owner', 'payment_status']),  # Analytics by owner
+            models.Index(fields=['status', 'created_at']),  # Status reports with date
+            models.Index(fields=['is_time_barred', 'payment_status']),  # Time-barred reports
+            models.Index(fields=['voyage', 'status']),  # Voyage claim summary
         ]
 
     def __str__(self):
@@ -356,6 +471,89 @@ class Claim(models.Model):
         return user.is_admin_role() or (self.status == 'DRAFT' and self.created_by == user and user.can_write())
 
 
+class ClaimActivityLog(models.Model):
+    """Activity log for critical claim operations - targeted audit trail"""
+
+    ACTION_CHOICES = [
+        ('CREATED', 'Claim Created'),
+        ('STATUS_CHANGED', 'Status Changed'),
+        ('PAYMENT_STATUS_CHANGED', 'Payment Status Changed'),
+        ('AMOUNT_CHANGED', 'Claim Amount Changed'),
+        ('PAID_AMOUNT_CHANGED', 'Paid Amount Changed'),
+        ('ASSIGNED', 'Claim Assigned'),
+        ('REASSIGNED', 'Claim Reassigned'),
+        ('DEADLINE_CHANGED', 'Deadline Changed'),
+        ('TIME_BARRED', 'Marked Time-Barred'),
+        ('DELETED', 'Claim Deleted'),
+    ]
+
+    claim = models.ForeignKey(
+        Claim,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='activity_logs',
+        help_text="The claim this activity is associated with"
+    )
+    claim_number = models.CharField(max_length=50, help_text="Claim number for reference (in case claim is deleted)")
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        help_text="User who performed the action"
+    )
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    message = models.TextField(help_text="Description of what changed")
+    old_value = models.TextField(blank=True, help_text="Previous value (if applicable)")
+    new_value = models.TextField(blank=True, help_text="New value (if applicable)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['claim', 'created_at']),
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['action', 'created_at']),
+        ]
+
+    def __str__(self):
+        claim_ref = self.claim.claim_number if self.claim else self.claim_number
+        return f"{claim_ref} - {self.get_action_display()} by {self.user.username if self.user else 'System'}"
+
+    @property
+    def action_icon(self):
+        """Get Bootstrap icon for action type"""
+        icons = {
+            'CREATED': 'plus-circle',
+            'STATUS_CHANGED': 'arrow-right-circle',
+            'PAYMENT_STATUS_CHANGED': 'cash-coin',
+            'AMOUNT_CHANGED': 'currency-dollar',
+            'PAID_AMOUNT_CHANGED': 'credit-card',
+            'ASSIGNED': 'person-check',
+            'REASSIGNED': 'arrow-left-right',
+            'DEADLINE_CHANGED': 'calendar-event',
+            'TIME_BARRED': 'exclamation-triangle',
+            'DELETED': 'trash',
+        }
+        return icons.get(self.action, 'circle')
+
+    @property
+    def action_color(self):
+        """Get Bootstrap color class for action type"""
+        colors = {
+            'CREATED': 'success',
+            'STATUS_CHANGED': 'info',
+            'PAYMENT_STATUS_CHANGED': 'primary',
+            'AMOUNT_CHANGED': 'warning',
+            'PAID_AMOUNT_CHANGED': 'success',
+            'ASSIGNED': 'info',
+            'REASSIGNED': 'warning',
+            'DEADLINE_CHANGED': 'warning',
+            'TIME_BARRED': 'danger',
+            'DELETED': 'danger',
+        }
+        return colors.get(self.action, 'secondary')
+
+
 class Comment(models.Model):
     """Comments on claims for discussion and tracking"""
 
@@ -367,9 +565,24 @@ class Comment(models.Model):
 
     class Meta:
         ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['claim', 'created_at']),  # Comments for a claim
+            models.Index(fields=['user']),  # Comments by user
+        ]
 
     def __str__(self):
         return f"Comment on {self.claim.claim_number} by {self.user.username}"
+
+
+def claim_document_path(instance, filename):
+    """
+    Generate hierarchical path for document uploads.
+    Path structure: voyages/{voyage_id}/claims/{claim_id}/documents/{filename}
+    This structure supports both local filesystem and cloud storage (Azure Blob, SharePoint).
+    """
+    voyage_id = instance.claim.voyage.id
+    claim_id = instance.claim.id
+    return f'voyages/{voyage_id}/claims/{claim_id}/documents/{filename}'
 
 
 class Document(models.Model):
@@ -387,13 +600,18 @@ class Document(models.Model):
     claim = models.ForeignKey(Claim, on_delete=models.CASCADE, related_name='documents')
     title = models.CharField(max_length=200)
     document_type = models.CharField(max_length=20, choices=DOCUMENT_TYPE_CHOICES)
-    file = models.FileField(upload_to='documents/%Y/%m/%d/')
+    file = models.FileField(upload_to=claim_document_path)
     uploaded_by = models.ForeignKey(User, on_delete=models.PROTECT)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     description = models.TextField(blank=True)
 
     class Meta:
         ordering = ['-uploaded_at']
+        indexes = [
+            models.Index(fields=['claim', 'uploaded_at']),  # Documents for a claim
+            models.Index(fields=['document_type']),  # Filter by document type
+            models.Index(fields=['uploaded_by']),  # Documents by user
+        ]
 
     def __str__(self):
         return f"{self.title} - {self.claim.claim_number}"

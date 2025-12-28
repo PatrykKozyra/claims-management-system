@@ -37,7 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
     'claims',
+    'ships',
+    'port_activities',
 ]
 
 MIDDLEWARE = [
@@ -121,6 +124,35 @@ STATICFILES_DIRS = [BASE_DIR / 'claims' / 'static']
 # Media files (uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# File Storage Configuration
+# Uses local filesystem in development (DEBUG=True)
+# Ready for cloud storage in production (Azure Blob or SharePoint)
+if DEBUG:
+    # Development: Use local filesystem storage
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+else:
+    # Production: Configure based on environment variables
+    # Uncomment and configure when IT team approves storage backend
+
+    # Option 1: Azure Blob Storage
+    # DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
+    # AZURE_ACCOUNT_NAME = os.environ.get('AZURE_ACCOUNT_NAME', '')
+    # AZURE_ACCOUNT_KEY = os.environ.get('AZURE_ACCOUNT_KEY', '')
+    # AZURE_CONTAINER = os.environ.get('AZURE_CONTAINER', 'documents')
+    # AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
+    # AZURE_SSL = True
+
+    # Option 2: SharePoint (via custom backend)
+    # DEFAULT_FILE_STORAGE = 'claims.storage_backends.SharePointStorage'
+    # SHAREPOINT_SITE_URL = os.environ.get('SHAREPOINT_SITE_URL', '')
+    # SHAREPOINT_DOCUMENT_LIBRARY = os.environ.get('SHAREPOINT_DOCUMENT_LIBRARY', 'Claims Documents')
+    # SHAREPOINT_CLIENT_ID = os.environ.get('SHAREPOINT_CLIENT_ID', '')
+    # SHAREPOINT_CLIENT_SECRET = os.environ.get('SHAREPOINT_CLIENT_SECRET', '')
+    # SHAREPOINT_TENANT_ID = os.environ.get('SHAREPOINT_TENANT_ID', '')
+
+    # For now, keep local storage until IT approves
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 # Authentication
 AUTH_USER_MODEL = 'claims.User'

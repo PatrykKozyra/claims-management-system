@@ -303,7 +303,10 @@
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Paid Amount ({{ claim.currency }})</label>
-                        <input type="number" name="paid_amount" step="0.01" class="form-control" value="{{ claim.paid_amount }}">
+                        <input type="number" name="paid_amount" step="0.01" class="form-control" value="{{ claim.paid_amount }}" readonly title="Paid amount is synced from RADAR system">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Synced from RADAR system
+                        </small>
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Settlement Notes</label>

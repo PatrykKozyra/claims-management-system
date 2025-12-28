@@ -190,6 +190,81 @@
     </div>
 </div>
 
+<!-- Assignment History -->
+{% if assignment_history %}
+<div class="card mb-3">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-clock-history"></i> Assignment History
+            <span class="badge bg-light text-dark">{{ assignment_history.count }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Assigned To</th>
+                        <th>Assigned By</th>
+                        <th>Assigned Date</th>
+                        <th>Unassigned Date</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignment_history %}
+                    <tr class="{% if assignment.is_active %}table-success{% endif %}">
+                        <td>
+                            <strong>{{ assignment.assigned_to.get_full_name|default:assignment.assigned_to.username }}</strong>
+                            {% if assignment.is_active %}
+                            <span class="badge bg-success ms-1">Current</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}</td>
+                        <td>{{ assignment.assigned_at|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            {% if assignment.unassigned_at %}
+                            {{ assignment.unassigned_at|date:"Y-m-d H:i" }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if assignment.duration_days > 0 %}
+                            {{ assignment.duration_days }} day{{ assignment.duration_days|pluralize }}
+                            {% else %}
+                            <span class="text-muted">&lt; 1 day</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if assignment.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Completed</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if assignment.reassignment_reason %}
+                            <small class="text-muted">{{ assignment.reassignment_reason|truncatewords:10 }}</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <small class="text-muted">
+            <i class="bi bi-info-circle"></i>
+            Assignment history provides an audit trail of all analysts who have worked on this voyage.
+        </small>
+    </div>
+</div>
+{% endif %}
+
 <!-- Claims for this Voyage -->
 <div class="card">
     <div class="card-header bg-dark text-white">

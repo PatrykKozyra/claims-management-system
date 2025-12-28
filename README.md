@@ -1,8 +1,14 @@
 # Claims Management & Tracking System
 
-A Django-based web application for managing and tracking demurrage and post-deal claims in the shipping industry.
+A comprehensive Django-based web application for managing and tracking demurrage and post-deal claims in the maritime shipping industry, with integrated ship fleet management and port activity tracking.
 
 ## Features
+
+### Multi-App Architecture
+The system is organized into specialized Django apps for separation of concerns:
+- **Claims App** - Core claims and voyage management
+- **Ships App** - Ship master data and Time Charter fleet tracking
+- **Port Activities App** - Port operations timeline with RADAR integration
 
 ### User Management & Permissions
 - **Role-Based Access Control**
@@ -35,30 +41,110 @@ A Django-based web application for managing and tracking demurrage and post-deal
   - Assign voyages to analysts
   - Team leads can assign to team members
   - Track assignment status (Unassigned, Assigned, Completed)
-  - Reassignment capability
+  - Assignment history tracking with audit trail
+  - Reassignment capability with reason tracking
 
 - **Claims Lifecycle**
   - Create, view, edit, and delete claims
   - Track voyage details and contract terms
   - Automatic demurrage calculations
   - Status workflow: Draft → Under Review → Submitted → Settled/Rejected
-  - Payment status tracking
+  - Payment status tracking with RADAR sync
   - Time-barred claims detection
+  - Activity logging for all claim changes
 
 - **Optimistic Locking**
   - Prevent concurrent edit conflicts
   - Version control on claims and voyages
   - User-friendly conflict resolution
 
+### Ship Fleet Management (New)
+- **Ship Master Data**
+  - IMO number and vessel identification
+  - Technical specifications (DWT, GT, engine power)
+  - Vessel types (VLCC, Suezmax, Aframax, Panamax, MR, LR1, LR2, Handysize)
+  - Charter type tracking (Spot, Time Charter, Bareboat)
+
+- **Time Charter (TC) Fleet**
+  - TC fleet flag and management
+  - Charter period tracking (start/end dates)
+  - Daily hire rate tracking
+  - Charterer information
+  - Charter status indicators (Active, Expiring, Inactive)
+  - Days remaining calculations
+  - External database sync support
+
+- **Ship Admin Interface**
+  - Visual TC status indicators with color coding
+  - Expiry warnings (red: ≤30 days, orange: ≤90 days, green: >90 days)
+  - Comprehensive filtering by vessel type, charter type, TC status
+  - Cross-app integration with voyage and claim history
+
+### Port Activity Tracking (New)
+- **Activity Types**
+  - Loading/Discharging operations
+  - Ship-to-Ship (STS) transfers
+  - Dry-docking
+  - Off-hire periods
+  - Bunkering
+  - Waiting time
+  - Custom activity categories
+
+- **Timeline Management**
+  - Start and end datetime tracking
+  - **Estimated vs Actual dates** (independent for start and end)
+  - RADAR system integration for date updates
+  - Auto-calculated duration (days and hours)
+  - Overlap validation to prevent double-booking
+
+- **Port Information**
+  - Port name (activity location)
+  - Load port and discharge port fields
+  - Cargo quantity tracking
+  - Voyage and ship linkage
+
+- **RADAR Integration**
+  - RADAR activity ID tracking
+  - Last sync timestamp
+  - Automatic status updates (ESTIMATED → ACTUAL)
+  - Mixed status support (e.g., start actual, end estimated)
+
+- **Service Layer**
+  - Business logic separation
+  - Pivot table data: Ship → Voyage → Activities
+  - Filter by activity category (STS, dry-dock, offhire)
+  - Summary statistics by ship and activity type
+
+### Data Integrity & Performance
+- **Database Optimization**
+  - 25+ strategic indexes for SQL Server deployment
+  - Single-column indexes for lookups
+  - Composite indexes for common query patterns
+  - Query optimization with select_related/prefetch_related
+
+- **Cloud Storage Preparation**
+  - django-storages integration ready
+  - Hierarchical file paths for documents
+  - Support for Azure Blob Storage and AWS S3
+  - Cloud storage path tracking on documents
+
+- **Audit & Tracking**
+  - Assignment history with VoyageAssignment model
+  - Claim activity logs (creation, status changes, reassignments)
+  - User tracking (created_by, assigned_to)
+  - Timestamp tracking (created_at, updated_at)
+
 ### Collaboration
 - Add comments to claims
 - Upload and manage documents (Charter Party, SOF, emails, etc.)
 - Assign claims to analysts
 - Track created by and assigned to users
+- Activity logs visible in admin interface
 
 ### Dashboard & Analytics
 - Personal dashboard with statistics
 - Analytics page with ship owner breakdown
+- Charts and visualizations
 - Filter and search claims
 - Payment status breakdown
 - Time-barred claims tracking
@@ -67,8 +153,9 @@ A Django-based web application for managing and tracking demurrage and post-deal
 ### User Interface
 - **Modern Navigation**
   - Collapsible sidebar with menu groups
-  - Claims System, Ship Data, Port Activity sections
-  - Future-ready placeholder sections
+  - Claims System section
+  - Ship Data section (Ships module)
+  - Port Activity section (Activities tracking)
 
 - **Top Navbar**
   - User profile dropdown
@@ -91,9 +178,10 @@ A Django-based web application for managing and tracking demurrage and post-deal
 ## Tech Stack
 
 - **Backend**: Python 3.11, Django 5.2.9
-- **Database**: SQLite (development), ready for PostgreSQL/SQL Server
+- **Database**: SQLite (development), optimized for SQL Server production
 - **Frontend**: Bootstrap 5.3, Bootstrap Icons
 - **File Processing**: openpyxl (Excel export), Pillow (image handling)
+- **Cloud Storage**: django-storages (Azure Blob, AWS S3 ready)
 
 ## Installation
 
@@ -121,7 +209,7 @@ A Django-based web application for managing and tracking demurrage and post-deal
 
 3. **Install dependencies**
    ```bash
-   pip install django pillow openpyxl
+   pip install -r requirements.txt
    ```
 
 4. **Run migrations**
@@ -138,6 +226,7 @@ A Django-based web application for managing and tracking demurrage and post-deal
    - 3 ship owners
    - 30 voyages with claims
    - Sample comments and documents
+   - Test ships and port activities
 
 6. **Create superuser (if not using dummy data)**
    ```bash
@@ -167,74 +256,13 @@ The system comes with pre-populated test users (after running populate_dummy_dat
 
 **Note**: Admin users automatically receive all permissions including `view_user_directory` and `export_users`.
 
-## User Permissions Guide
-
-### Granting User Directory Access
-
-1. Login as admin at `/admin/`
-2. Navigate to **Users** under CLAIMS
-3. Select the user to edit
-4. Scroll to **User permissions** section
-5. Add these permissions:
-   - `Can view user directory` - Allows access to Users page
-   - `Can export users to Excel` - Allows exporting user data
-6. Save the user
-
-**Tip**: Create groups (e.g., "HR Team", "Management") and assign permissions to groups for easier bulk management.
-
-See [USER_PERMISSIONS_GUIDE.md](USER_PERMISSIONS_GUIDE.md) for detailed permission documentation.
-
-## Key Features Explained
-
-### User Directory Views
-
-**Cards View** (Default):
-- Visual card layout with profile photos
-- Shows role, department, contact info
-- Statistics for voyages and claims assigned
-
-**Table View**:
-- Compact table format
-- Sortable columns
-- Quick actions
-
-**Sorting Options**:
-- Name (A-Z or Z-A)
-- Date Joined (newest or oldest first)
-- Voyages (most or least)
-- Claims (most or least)
-
-### Voyage Assignment Workflow
-
-1. Admin/Team Lead accesses Voyage Assignment
-2. Unassigned voyages appear at the top
-3. Click "Assign to Me" or "Assign to Analyst"
-4. System tracks assignment status
-5. Assigned analyst can create claims for the voyage
-6. Reassignment available if needed
-
-### Claim Status Workflow
-
-```
-Draft → Under Review → Submitted → Settled/Rejected
-                              ↓
-                    Payment Status tracked separately
-```
-
-### Dark Mode
-
-Users can toggle between light and dark themes:
-- Click sun/moon icon in top navbar
-- Preference saved per user
-- Applies across all pages
-
 ## Project Structure
 
 ```
 claims-management-system/
-├── claims/                          # Main Django app
+├── claims/                          # Core claims & voyage management
 │   ├── management/commands/         # Custom management commands
-│   ├── migrations/                  # Database migrations
+│   ├── migrations/                  # Database migrations (10 files)
 │   ├── templates/claims/            # HTML templates
 │   │   ├── errors/                  # Error page templates
 │   │   ├── claim_*.html            # Claim-related pages
@@ -247,23 +275,39 @@ claims-management-system/
 │   ├── models.py                    # Database models
 │   ├── urls.py                      # URL routing
 │   └── views.py                     # View logic
+├── ships/                           # Ship fleet management (NEW)
+│   ├── migrations/                  # Database migrations
+│   ├── admin.py                     # Ship admin with TC status
+│   ├── models.py                    # Ship model
+│   └── apps.py                      # App configuration
+├── port_activities/                 # Port activity tracking (NEW)
+│   ├── migrations/                  # Database migrations
+│   ├── admin.py                     # Activity admin with date indicators
+│   ├── models.py                    # ActivityType, PortActivity models
+│   ├── services.py                  # Business logic layer
+│   └── apps.py                      # App configuration
 ├── claims_system/                   # Django project settings
+│   ├── settings.py                  # Project configuration
+│   ├── urls.py                      # Root URL configuration
+│   └── wsgi.py                      # WSGI configuration
 ├── media/                           # Uploaded files
 │   ├── documents/                   # Claim documents
 │   └── profile_photos/              # User profile photos
 ├── venv/                            # Virtual environment
 ├── db.sqlite3                       # SQLite database
 ├── manage.py                        # Django management script
+├── requirements.txt                 # Python dependencies
 ├── README.md                        # This file
 ├── SETUP_GUIDE.md                   # Detailed setup instructions
 ├── TESTING_DOCUMENTATION.md         # Testing guide
 ├── USER_PERMISSIONS_GUIDE.md        # Permission management guide
-└── TEAM_LEAD_ASSIGNMENT_FEATURES.md # Feature documentation
+├── TEAM_LEAD_ASSIGNMENT_FEATURES.md # Feature documentation
+└── IMPROVEMENTS_LOG.md              # Change log
 ```
 
 ## Database Models
 
-### Core Models
+### Claims App Models
 
 **User** (Extended AbstractUser):
 - Role-based permissions
@@ -281,7 +325,7 @@ claims-management-system/
 - RADAR voyage ID (unique)
 - Vessel details
 - Load/discharge ports and dates
-- Assignment tracking
+- Assignment tracking with history
 - Version control for optimistic locking
 
 **Claim**:
@@ -292,45 +336,174 @@ claims-management-system/
 - Time-barred flag
 - Comments and documents
 - Version control
+- Activity logging
+
+**VoyageAssignment**:
+- Assignment history tracking
+- Assigned to/by users
+- Assignment timestamps
+- Duration calculations
+- Reassignment reason
+
+**ClaimActivityLog**:
+- Action type (CREATED, STATUS_CHANGED, etc.)
+- User who performed action
+- Old and new values
+- Timestamp tracking
 
 **Comment & Document**:
 - Attached to claims
 - User tracking
+- Cloud storage path support
 - Timestamps
+
+### Ships App Models (NEW)
+
+**Ship**:
+- IMO number (unique identifier)
+- Vessel name and type
+- Technical specifications (DWT, GT, engine)
+- Charter information (type, dates, rates)
+- TC fleet management fields
+- External database sync support
+- Properties: is_charter_active, charter_days_remaining
+
+### Port Activities App Models (NEW)
+
+**ActivityType**:
+- Activity name and category
+- Description
+- Active/inactive status
+
+**PortActivity**:
+- Ship and voyage references (cross-app)
+- Activity type
+- Port information (port_name, load_port, discharge_port)
+- Timeline with estimated/actual tracking:
+  - start_datetime + start_date_status
+  - end_datetime + end_date_status
+- Auto-calculated duration
+- Cargo quantity
+- RADAR sync tracking
+- Overlap validation
+- Properties: duration_hours, duration_days, is_fully_actual, is_fully_estimated
+
+## Key Features Explained
+
+### Time Charter Fleet Management
+
+**TC Status Indicators**:
+- **Green**: Active charter, >90 days remaining
+- **Orange**: Active charter, 31-90 days remaining
+- **Red**: Expiring soon, ≤30 days remaining
+- **Gray**: Inactive or not TC fleet
+
+**Charter Tracking**:
+- Automatic status calculation based on dates
+- Days remaining display
+- Daily hire rate tracking
+- Charterer information
+- Integration with voyage data
+
+### Port Activity Timeline
+
+**Estimated vs Actual Dates**:
+- Independent status for start and end dates
+- RADAR system updates from estimated to actual
+- Mixed status support (e.g., start actual, end estimated)
+- Visual indicators in admin (✓ for actual, ~ for estimated)
+- Color-coded badges (green: actual, orange: estimated, gray: mixed)
+
+**Activity Filtering**:
+- Filter by category (STS, dry-dock, offhire, etc.)
+- Ship timeline view
+- Voyage activities grouping
+- Date range filtering
+- Pivot table structure: Ship → Voyage → Activities
+
+**Business Logic Layer**:
+- `PortActivityService.get_pivot_data()` - Hierarchical data
+- `PortActivityService.get_sts_operations()` - STS filtering
+- `PortActivityService.get_drydock_operations()` - Dry-dock filtering
+- `PortActivityService.get_offhire_periods()` - Offhire filtering
+
+### Assignment History Tracking
+
+**Voyage Assignment History**:
+- Full audit trail of all assignments
+- Assigned to/by user tracking
+- Assignment and unassignment timestamps
+- Duration calculations
+- Reassignment reason notes
+- Active/completed status
+- Visible in voyage detail page
+
+### Optimistic Locking & Concurrency
+
+**Version Control**:
+- Claims and voyages have version fields
+- Prevents lost updates in concurrent edits
+- User-friendly error messages
+- Reload and retry mechanism
+
+### Cloud Storage Integration
+
+**Document Management**:
+- Hierarchical file paths (YYYY/MM/)
+- Cloud storage path tracking
+- django-storages ready
+- Azure Blob and AWS S3 support
+- Local development with file system
 
 ## Usage Examples
 
-### Creating and Managing Claims
+### Managing Time Charter Fleet
 
-1. **Create Claim**
-   - Navigate to assigned voyage
-   - Click "Create Claim"
-   - Fill in contract terms
-   - System calculates demurrage automatically
-   - Save as Draft
+1. **Add TC Vessel**
+   - Navigate to Ships in admin
+   - Click "Add Ship"
+   - Fill in vessel details and IMO
+   - Set charter type to "Time Charter"
+   - Mark "Is TC fleet" checkbox
+   - Enter charter dates and daily rate
+   - Enter charterer name
+   - Save
 
-2. **Submit for Review**
-   - Open claim detail page
-   - Click "Update Status"
-   - Change status to "Under Review"
-   - Add comment explaining submission
+2. **Monitor Charter Expiry**
+   - View ships list in admin
+   - Check TC Status column for color-coded alerts
+   - Red vessels require attention (≤30 days)
+   - Plan renewals or replacements
 
-3. **Track Payment**
-   - Update payment status separately
-   - Options: Not Sent, Sent, Partially Paid, Paid, Timebar
+### Tracking Port Activities
 
-### Managing User Access
+1. **Create Port Activity**
+   - Navigate to Port Activities in admin
+   - Click "Add Port Activity"
+   - Select ship and voyage
+   - Choose activity type (e.g., Loading)
+   - Enter port names (load/discharge if applicable)
+   - Set start/end datetimes
+   - Mark dates as ESTIMATED or ACTUAL
+   - Enter cargo quantity if applicable
+   - Save
 
-**View User Directory**:
-- Only available to users with permission
-- Click "Users" in sidebar (if you have access)
-- Search, filter, and sort users
-- Export to Excel (if you have export permission)
+2. **Update from RADAR**
+   - RADAR sync updates date statuses
+   - Estimated dates become actual when confirmed
+   - Last sync timestamp recorded
+   - Visual indicators update automatically
 
-**Grant Permissions**:
-- Admin → Users → Select user
-- Add permissions or assign to groups
-- Staff users bypass permission checks
+3. **View Ship Timeline**
+   - Use `PortActivityService.get_ship_timeline()`
+   - See all activities chronologically
+   - Filter by date range
+   - Identify overlaps or gaps
+
+4. **Filter by Activity Type**
+   - STS operations: `get_sts_operations()`
+   - Dry-dock periods: `get_drydock_operations()`
+   - Offhire periods: `get_offhire_periods()`
 
 ## Development & Deployment
 
@@ -355,9 +528,16 @@ See [TESTING_DOCUMENTATION.md](TESTING_DOCUMENTATION.md) for comprehensive testi
 ### Production Considerations
 
 **Database**:
-- Migrate from SQLite to PostgreSQL or SQL Server
+- Migrate from SQLite to SQL Server or PostgreSQL
+- Database already optimized with 40+ indexes
 - Configure connection pooling
 - Set up regular backups
+
+**Cloud Storage**:
+- Configure django-storages settings
+- Set up Azure Blob Storage or AWS S3
+- Update MEDIA_URL and MEDIA_ROOT
+- Migrate existing files
 
 **Security**:
 - Change SECRET_KEY
@@ -369,36 +549,17 @@ See [TESTING_DOCUMENTATION.md](TESTING_DOCUMENTATION.md) for comprehensive testi
 - Regular security updates
 
 **Performance**:
+- Database indexes already implemented
+- Query optimization with select_related/prefetch_related
 - Configure caching (Redis, Memcached)
-- Optimize database queries
 - Set up static file serving (CDN)
-- Consider async task queue (Celery)
+- Consider async task queue (Celery) for RADAR sync
 
-**Monitoring**:
-- Error tracking (Sentry)
-- Performance monitoring
-- Audit logging
-- User analytics
-
-### Customization Guide
-
-**Add New Field to Claim**:
-1. Update `claims/models.py` → Claim model
-2. Create migration: `python manage.py makemigrations`
-3. Run migration: `python manage.py migrate`
-4. Update `claims/forms.py` → ClaimForm
-5. Update templates to display the field
-
-**Add New Permission**:
-1. Add to model's Meta.permissions
-2. Create migration
-3. Update views with permission checks
-4. Update templates to show/hide based on permission
-
-**Customize UI**:
-- Edit `claims/templates/claims/base.html` for navigation
-- Modify individual page templates
-- Update CSS in `<style>` blocks or add static CSS files
+**Integration**:
+- RADAR system API integration
+- External TC fleet database sync
+- Email notifications for charter expiry
+- Automated activity updates
 
 ## Troubleshooting
 
@@ -419,19 +580,26 @@ See [TESTING_DOCUMENTATION.md](TESTING_DOCUMENTATION.md) for comprehensive testi
 - Verify `is_staff` status for admin access
 - Check migration status: `python manage.py showmigrations`
 
+**Ship or Port Activity not showing**:
+- Verify migrations are applied: `python manage.py migrate`
+- Check if apps are in INSTALLED_APPS
+- Restart development server
+
 ### Getting Help
 
 1. Check error logs in console
 2. Review Django documentation: https://docs.djangoproject.com/
-3. Check migration status: `python manage.py showmigrations claims`
+3. Check migration status: `python manage.py showmigrations`
 4. Verify database integrity: `python manage.py check`
 
 ## Documentation
 
+- **[README.md](README.md)** - This file, comprehensive overview
 - **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed installation and configuration
 - **[TESTING_DOCUMENTATION.md](TESTING_DOCUMENTATION.md)** - Testing strategy and test cases
 - **[USER_PERMISSIONS_GUIDE.md](USER_PERMISSIONS_GUIDE.md)** - Permission management
 - **[TEAM_LEAD_ASSIGNMENT_FEATURES.md](TEAM_LEAD_ASSIGNMENT_FEATURES.md)** - Feature overview
+- **[IMPROVEMENTS_LOG.md](IMPROVEMENTS_LOG.md)** - Changelog and improvements
 
 ## License
 
@@ -439,6 +607,7 @@ This is a prototype project for demonstration and internal use purposes.
 
 ## Version History
 
+- **v2.0** (Dec 2025) - Multi-app architecture, Ships & Port Activities modules, performance optimization
 - **v1.3** (Dec 2025) - User directory with permissions, cards/table views, export
 - **v1.2** (Dec 2025) - Voyage assignment, team lead features, optimistic locking
 - **v1.1** (Dec 2025) - Analytics, dark mode, user profiles
@@ -446,4 +615,4 @@ This is a prototype project for demonstration and internal use purposes.
 
 ---
 
-**Last Updated**: December 27, 2025
+**Last Updated**: December 29, 2025
