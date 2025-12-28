@@ -106,12 +106,17 @@
 <div class="card mb-4">
     <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-credit-card"></i> Payment Status Breakdown</h5>
-        <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-light active" id="paymentTableBtn">
-                <i class="bi bi-table"></i> Table
-            </button>
-            <button type="button" class="btn btn-light" id="paymentChartBtn">
-                <i class="bi bi-bar-chart-fill"></i> Chart
+        <div class="d-flex gap-2">
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-light active" id="paymentTableBtn">
+                    <i class="bi bi-table"></i> Table
+                </button>
+                <button type="button" class="btn btn-light" id="paymentChartBtn">
+                    <i class="bi bi-bar-chart-fill"></i> Chart
+                </button>
+            </div>
+            <button type="button" class="btn btn-light btn-sm" id="exportPaymentBtn">
+                <i class="bi bi-file-earmark-excel"></i> Export
             </button>
         </div>
     </div>
@@ -176,12 +181,17 @@
 <div class="card mb-4">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-building"></i> Statistics by Ship Owner</h5>
-        <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-light active" id="ownerTableBtn">
-                <i class="bi bi-table"></i> Table
-            </button>
-            <button type="button" class="btn btn-light" id="ownerChartBtn">
-                <i class="bi bi-bar-chart-fill"></i> Chart
+        <div class="d-flex gap-2">
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-light active" id="ownerTableBtn">
+                    <i class="bi bi-table"></i> Table
+                </button>
+                <button type="button" class="btn btn-light" id="ownerChartBtn">
+                    <i class="bi bi-bar-chart-fill"></i> Chart
+                </button>
+            </div>
+            <button type="button" class="btn btn-light btn-sm" id="exportOwnerBtn">
+                <i class="bi bi-file-earmark-excel"></i> Export
             </button>
         </div>
     </div>
@@ -409,6 +419,15 @@ ownerChartBtn.addEventListener('click', function() {
     if (!ownerFinancialChart) {
         createOwnerChart();
     }
+});
+
+// Export buttons
+document.getElementById('exportPaymentBtn').addEventListener('click', function() {
+    window.location.href = '{% url "export_payment_breakdown" %}?' + window.location.search.substring(1);
+});
+
+document.getElementById('exportOwnerBtn').addEventListener('click', function() {
+    window.location.href = '{% url "export_owner_stats" %}?' + window.location.search.substring(1);
 });
 
 // Create Payment Status Charts

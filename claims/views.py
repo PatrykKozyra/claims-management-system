@@ -3,7 +3,7 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
-from django.db.models import Q, Count, Sum, F, Case, When
+from django.db.models import Q, Count, Sum, Avg, F, Case, When
 from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
@@ -311,7 +311,20 @@ def analytics_dashboard(request):
         total_paid=Sum('paid_amount'),
         total_outstanding=Sum(F('claim_amount') - F('paid_amount')),
         time_barred_count=Count(Case(When(is_time_barred=True, then=1))),
+        avg_value=Avg('claim_amount'),
     ).order_by('-total_value')
+
+    # Add analyst_name for easier template access
+    for stat in analyst_stats:
+        first_name = stat.get('assigned_to__first_name', '')
+        last_name = stat.get('assigned_to__last_name', '')
+        username = stat.get('assigned_to__username', '')
+        if first_name and last_name:
+            stat['analyst_name'] = f"{first_name} {last_name}"
+        elif first_name:
+            stat['analyst_name'] = first_name
+        else:
+            stat['analyst_name'] = username or 'Unassigned'
 
     # Aggregate by Vessel
     vessel_stats = claims.values('voyage__vessel_name').annotate(
@@ -321,13 +334,7 @@ def analytics_dashboard(request):
         total_outstanding=Sum(F('claim_amount') - F('paid_amount')),
     ).order_by('-total_value')[:20]  # Top 20 vessels
 
-    # Payment status breakdown
-    payment_breakdown = claims.values('payment_status').annotate(
-        count=Count('id'),
-        total_value=Sum('claim_amount')
-    ).order_by('payment_status')
-
-    # Overall statistics
+    # Overall statistics (calculate first, needed for percentages)
     overall_stats = claims.aggregate(
         total_claims=Count('id'),
         total_value=Sum('claim_amount'),
@@ -335,6 +342,21 @@ def analytics_dashboard(request):
         total_outstanding=Sum(F('claim_amount') - F('paid_amount')),
         time_barred_count=Count(Case(When(is_time_barred=True, then=1))),
     )
+
+    # Payment status breakdown
+    payment_breakdown = claims.values('payment_status').annotate(
+        count=Count('id'),
+        total_value=Sum('claim_amount')
+    ).order_by('payment_status')
+
+    # Add status display and percentage to payment breakdown
+    status_dict = dict(Claim.PAYMENT_STATUS_CHOICES)
+    for stat in payment_breakdown:
+        stat['status_display'] = status_dict.get(stat['payment_status'], stat['payment_status'])
+        if overall_stats['total_value']:
+            stat['percentage'] = (stat['total_value'] / overall_stats['total_value']) * 100
+        else:
+            stat['percentage'] = 0
 
     # Get filter options
     ship_owners = ShipOwner.objects.all().order_by('name')
@@ -357,6 +379,177 @@ def analytics_dashboard(request):
     }
 
     return render(request, 'claims/analytics.html', context)
+
+
+@login_required
+def export_payment_breakdown(request):
+    """Export payment status breakdown to Excel"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+
+    user = request.user
+
+    # Get filtered claims (same logic as analytics_dashboard)
+    claims = Claim.objects.all().select_related('voyage', 'ship_owner', 'assigned_to')
+
+    # Apply same filters
+    owner_filter = request.GET.get('owner')
+    if owner_filter:
+        claims = claims.filter(ship_owner_id=owner_filter)
+
+    analyst_filter = request.GET.get('analyst')
+    if analyst_filter:
+        if analyst_filter == 'me':
+            claims = claims.filter(assigned_to=user)
+        else:
+            claims = claims.filter(assigned_to_id=analyst_filter)
+
+    payment_filter = request.GET.get('payment')
+    if payment_filter:
+        claims = claims.filter(payment_status=payment_filter)
+
+    timebar_filter = request.GET.get('timebar')
+    if timebar_filter == 'yes':
+        claims = claims.filter(is_time_barred=True)
+    elif timebar_filter == 'no':
+        claims = claims.filter(is_time_barred=False)
+
+    # Get payment breakdown
+    payment_breakdown = claims.values('payment_status').annotate(
+        count=Count('id'),
+        total_value=Sum('claim_amount')
+    ).order_by('payment_status')
+
+    # Calculate total for percentages
+    total_value = claims.aggregate(total=Sum('claim_amount'))['total'] or 0
+
+    # Create workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Payment Status Breakdown"
+
+    # Headers
+    headers = ['Payment Status', 'Count', 'Total Value (USD)', '% of Total']
+    header_fill = PatternFill(start_color='0dcaf0', end_color='0dcaf0', fill_type='solid')
+    header_font = Font(bold=True, color='FFFFFF')
+
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Data rows
+    status_dict = dict(Claim.PAYMENT_STATUS_CHOICES)
+    for row_num, stat in enumerate(payment_breakdown, 2):
+        ws.cell(row=row_num, column=1, value=status_dict.get(stat['payment_status'], stat['payment_status']))
+        ws.cell(row=row_num, column=2, value=stat['count'])
+        ws.cell(row=row_num, column=3, value=float(stat['total_value'] or 0))
+        percentage = (float(stat['total_value'] or 0) / total_value * 100) if total_value > 0 else 0
+        ws.cell(row=row_num, column=4, value=f"{percentage:.1f}%")
+
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 20
+    ws.column_dimensions['B'].width = 12
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 15
+
+    # Prepare response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename=payment_breakdown_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+
+    wb.save(response)
+    return response
+
+
+@login_required
+def export_owner_stats(request):
+    """Export ship owner statistics to Excel"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+
+    user = request.user
+
+    # Get filtered claims (same logic as analytics_dashboard)
+    claims = Claim.objects.all().select_related('voyage', 'ship_owner', 'assigned_to')
+
+    # Apply same filters
+    owner_filter = request.GET.get('owner')
+    if owner_filter:
+        claims = claims.filter(ship_owner_id=owner_filter)
+
+    analyst_filter = request.GET.get('analyst')
+    if analyst_filter:
+        if analyst_filter == 'me':
+            claims = claims.filter(assigned_to=user)
+        else:
+            claims = claims.filter(assigned_to_id=analyst_filter)
+
+    payment_filter = request.GET.get('payment')
+    if payment_filter:
+        claims = claims.filter(payment_status=payment_filter)
+
+    timebar_filter = request.GET.get('timebar')
+    if timebar_filter == 'yes':
+        claims = claims.filter(is_time_barred=True)
+    elif timebar_filter == 'no':
+        claims = claims.filter(is_time_barred=False)
+
+    # Aggregate by Ship Owner
+    owner_stats = claims.values('ship_owner__name', 'ship_owner__code').annotate(
+        total_claims=Count('id'),
+        total_value=Sum('claim_amount'),
+        total_paid=Sum('paid_amount'),
+        total_outstanding=Sum(F('claim_amount') - F('paid_amount')),
+        time_barred_count=Count(Case(When(is_time_barred=True, then=1))),
+    ).order_by('-total_value')
+
+    # Create workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Ship Owner Statistics"
+
+    # Headers
+    headers = ['Ship Owner', 'Owner Code', 'Total Claims', 'Total Value (USD)',
+               'Total Paid (USD)', 'Outstanding (USD)', 'Time-barred']
+    header_fill = PatternFill(start_color='0d6efd', end_color='0d6efd', fill_type='solid')
+    header_font = Font(bold=True, color='FFFFFF')
+
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Data rows
+    for row_num, stat in enumerate(owner_stats, 2):
+        ws.cell(row=row_num, column=1, value=stat['ship_owner__name'])
+        ws.cell(row=row_num, column=2, value=stat['ship_owner__code'] or '')
+        ws.cell(row=row_num, column=3, value=stat['total_claims'])
+        ws.cell(row=row_num, column=4, value=float(stat['total_value'] or 0))
+        ws.cell(row=row_num, column=5, value=float(stat['total_paid'] or 0))
+        ws.cell(row=row_num, column=6, value=float(stat['total_outstanding'] or 0))
+        ws.cell(row=row_num, column=7, value=stat['time_barred_count'])
+
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 30
+    ws.column_dimensions['B'].width = 15
+    ws.column_dimensions['C'].width = 15
+    ws.column_dimensions['D'].width = 20
+    ws.column_dimensions['E'].width = 20
+    ws.column_dimensions['F'].width = 20
+    ws.column_dimensions['G'].width = 15
+
+    # Prepare response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename=owner_stats_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+
+    wb.save(response)
+    return response
 
 
 @login_required

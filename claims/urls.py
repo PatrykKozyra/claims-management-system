@@ -19,6 +19,8 @@ urlpatterns = [
 
     # Analytics (NEW)
     path('analytics/', views.analytics_dashboard, name='analytics'),
+    path('analytics/export/payment/', views.export_payment_breakdown, name='export_payment_breakdown'),
+    path('analytics/export/owner/', views.export_owner_stats, name='export_owner_stats'),
 
     # Claims
     path('claims/', views.claim_list, name='claim_list'),
