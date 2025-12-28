@@ -104,97 +104,143 @@
 
 <!-- Payment Status Breakdown -->
 <div class="card mb-4">
-    <div class="card-header bg-info text-white">
+    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-credit-card"></i> Payment Status Breakdown</h5>
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-light active" id="paymentTableBtn">
+                <i class="bi bi-table"></i> Table
+            </button>
+            <button type="button" class="btn btn-light" id="paymentChartBtn">
+                <i class="bi bi-bar-chart-fill"></i> Chart
+            </button>
+        </div>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Payment Status</th>
-                        <th class="text-end">Count</th>
-                        <th class="text-end">Total Value</th>
-                        <th class="text-end">% of Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stat in payment_breakdown %}
-                    <tr>
-                        <td>
-                            <span class="badge bg-{% if stat.payment_status == 'PAID' %}success{% elif stat.payment_status == 'TIMEBAR' %}danger{% elif stat.payment_status == 'SENT' %}info{% elif stat.payment_status == 'PARTIALLY_PAID' %}warning{% else %}secondary{% endif %}">
-                                {{ stat.status_display }}
-                            </span>
-                        </td>
-                        <td class="text-end">{{ stat.count }}</td>
-                        <td class="text-end">{{ stat.total_value|floatformat:2|default:0 }} USD</td>
-                        <td class="text-end">
-                            {% if overall_stats.total_value > 0 %}
-                            {{ stat.percentage|floatformat:1 }}%
-                            {% else %}
-                            0%
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="text-center text-muted">No data available</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Table View -->
+        <div id="paymentTableView">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Payment Status</th>
+                            <th class="text-end">Count</th>
+                            <th class="text-end">Total Value</th>
+                            <th class="text-end">% of Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in payment_breakdown %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-{% if stat.payment_status == 'PAID' %}success{% elif stat.payment_status == 'TIMEBAR' %}danger{% elif stat.payment_status == 'SENT' %}info{% elif stat.payment_status == 'PARTIALLY_PAID' %}warning{% else %}secondary{% endif %}">
+                                    {{ stat.status_display }}
+                                </span>
+                            </td>
+                            <td class="text-end">{{ stat.count }}</td>
+                            <td class="text-end">{{ stat.total_value|floatformat:2|default:0 }} USD</td>
+                            <td class="text-end">
+                                {% if overall_stats.total_value > 0 %}
+                                {{ stat.percentage|floatformat:1 }}%
+                                {% else %}
+                                0%
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Chart View -->
+        <div id="paymentChartView" style="display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-center mb-3">Claims Count by Payment Status</h6>
+                    <canvas id="paymentCountChart" style="max-height: 300px;"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-center mb-3">Value Distribution by Payment Status</h6>
+                    <canvas id="paymentValueChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- By Ship Owner Statistics -->
 <div class="card mb-4">
-    <div class="card-header bg-primary text-white">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-building"></i> Statistics by Ship Owner</h5>
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-light active" id="ownerTableBtn">
+                <i class="bi bi-table"></i> Table
+            </button>
+            <button type="button" class="btn btn-light" id="ownerChartBtn">
+                <i class="bi bi-bar-chart-fill"></i> Chart
+            </button>
+        </div>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>Ship Owner</th>
-                        <th class="text-end">Total Claims</th>
-                        <th class="text-end">Total Value</th>
-                        <th class="text-end">Total Paid</th>
-                        <th class="text-end">Outstanding</th>
-                        <th class="text-end">Time-barred</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stat in owner_stats %}
-                    <tr>
-                        <td>
-                            <strong>{{ stat.ship_owner__name }}</strong>
-                            {% if stat.ship_owner__code %}
-                            <br><small class="text-muted">{{ stat.ship_owner__code }}</small>
-                            {% endif %}
-                        </td>
-                        <td class="text-end">{{ stat.total_claims }}</td>
-                        <td class="text-end">{{ stat.total_value|floatformat:2|default:0 }} USD</td>
-                        <td class="text-end text-success">{{ stat.total_paid|floatformat:2|default:0 }} USD</td>
-                        <td class="text-end {% if stat.total_outstanding > 0 %}text-danger fw-bold{% endif %}">
-                            {{ stat.total_outstanding|floatformat:2|default:0 }} USD
-                        </td>
-                        <td class="text-end">
-                            {% if stat.time_barred_count > 0 %}
-                            <span class="badge bg-danger">{{ stat.time_barred_count }}</span>
-                            {% else %}
-                            <span class="text-muted">0</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center text-muted">No data available</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Table View -->
+        <div id="ownerTableView">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Ship Owner</th>
+                            <th class="text-end">Total Claims</th>
+                            <th class="text-end">Total Value</th>
+                            <th class="text-end">Total Paid</th>
+                            <th class="text-end">Outstanding</th>
+                            <th class="text-end">Time-barred</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in owner_stats %}
+                        <tr>
+                            <td>
+                                <strong>{{ stat.ship_owner__name }}</strong>
+                                {% if stat.ship_owner__code %}
+                                <br><small class="text-muted">{{ stat.ship_owner__code }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ stat.total_claims }}</td>
+                            <td class="text-end">{{ stat.total_value|floatformat:2|default:0 }} USD</td>
+                            <td class="text-end text-success">{{ stat.total_paid|floatformat:2|default:0 }} USD</td>
+                            <td class="text-end {% if stat.total_outstanding > 0 %}text-danger fw-bold{% endif %}">
+                                {{ stat.total_outstanding|floatformat:2|default:0 }} USD
+                            </td>
+                            <td class="text-end">
+                                {% if stat.time_barred_count > 0 %}
+                                <span class="badge bg-danger">{{ stat.time_barred_count }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Chart View -->
+        <div id="ownerChartView" style="display: none;">
+            <div class="row">
+                <div class="col-12">
+                    <h6 class="text-center mb-3">Ship Owner Financial Overview</h6>
+                    <canvas id="ownerFinancialChart" style="max-height: 400px;"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -304,4 +350,211 @@
         All amounts are displayed in USD. Statistics update in real-time based on applied filters.
     </p>
 </div>
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Payment Status Toggle
+const paymentTableBtn = document.getElementById('paymentTableBtn');
+const paymentChartBtn = document.getElementById('paymentChartBtn');
+const paymentTableView = document.getElementById('paymentTableView');
+const paymentChartView = document.getElementById('paymentChartView');
+
+let paymentCountChart = null;
+let paymentValueChart = null;
+
+paymentTableBtn.addEventListener('click', function() {
+    paymentTableView.style.display = 'block';
+    paymentChartView.style.display = 'none';
+    paymentTableBtn.classList.add('active');
+    paymentChartBtn.classList.remove('active');
+});
+
+paymentChartBtn.addEventListener('click', function() {
+    paymentTableView.style.display = 'none';
+    paymentChartView.style.display = 'block';
+    paymentTableBtn.classList.remove('active');
+    paymentChartBtn.classList.add('active');
+
+    // Initialize charts if not already created
+    if (!paymentCountChart) {
+        createPaymentCharts();
+    }
+});
+
+// Owner Stats Toggle
+const ownerTableBtn = document.getElementById('ownerTableBtn');
+const ownerChartBtn = document.getElementById('ownerChartBtn');
+const ownerTableView = document.getElementById('ownerTableView');
+const ownerChartView = document.getElementById('ownerChartView');
+
+let ownerFinancialChart = null;
+
+ownerTableBtn.addEventListener('click', function() {
+    ownerTableView.style.display = 'block';
+    ownerChartView.style.display = 'none';
+    ownerTableBtn.classList.add('active');
+    ownerChartBtn.classList.remove('active');
+});
+
+ownerChartBtn.addEventListener('click', function() {
+    ownerTableView.style.display = 'none';
+    ownerChartView.style.display = 'block';
+    ownerTableBtn.classList.remove('active');
+    ownerChartBtn.classList.add('active');
+
+    // Initialize chart if not already created
+    if (!ownerFinancialChart) {
+        createOwnerChart();
+    }
+});
+
+// Create Payment Status Charts
+function createPaymentCharts() {
+    const paymentData = [
+        {% for stat in payment_breakdown %}
+        {
+            status: '{{ stat.status_display }}',
+            count: {{ stat.count }},
+            value: {{ stat.total_value|default:0 }},
+            color: '{% if stat.payment_status == "PAID" %}#198754{% elif stat.payment_status == "TIMEBAR" %}#dc3545{% elif stat.payment_status == "SENT" %}#0dcaf0{% elif stat.payment_status == "PARTIALLY_PAID" %}#ffc107{% else %}#6c757d{% endif %}'
+        },
+        {% endfor %}
+    ];
+
+    // Count Chart (Pie)
+    const countCtx = document.getElementById('paymentCountChart').getContext('2d');
+    paymentCountChart = new Chart(countCtx, {
+        type: 'pie',
+        data: {
+            labels: paymentData.map(d => d.status),
+            datasets: [{
+                data: paymentData.map(d => d.count),
+                backgroundColor: paymentData.map(d => d.color),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed + ' claims';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Value Chart (Doughnut)
+    const valueCtx = document.getElementById('paymentValueChart').getContext('2d');
+    paymentValueChart = new Chart(valueCtx, {
+        type: 'doughnut',
+        data: {
+            labels: paymentData.map(d => d.status),
+            datasets: [{
+                data: paymentData.map(d => d.value),
+                backgroundColor: paymentData.map(d => d.color),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': $' + context.parsed.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USD';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Create Owner Financial Chart
+function createOwnerChart() {
+    const ownerData = [
+        {% for stat in owner_stats %}
+        {
+            name: '{{ stat.ship_owner__name }}',
+            totalValue: {{ stat.total_value|default:0 }},
+            totalPaid: {{ stat.total_paid|default:0 }},
+            outstanding: {{ stat.total_outstanding|default:0 }}
+        },
+        {% endfor %}
+    ];
+
+    const ctx = document.getElementById('ownerFinancialChart').getContext('2d');
+    ownerFinancialChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ownerData.map(d => d.name),
+            datasets: [
+                {
+                    label: 'Total Value',
+                    data: ownerData.map(d => d.totalValue),
+                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Total Paid',
+                    data: ownerData.map(d => d.totalPaid),
+                    backgroundColor: 'rgba(25, 135, 84, 0.7)',
+                    borderColor: 'rgba(25, 135, 84, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Outstanding',
+                    data: ownerData.map(d => d.outstanding),
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString('en-US');
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': $' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USD';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
 {% endblock %}
