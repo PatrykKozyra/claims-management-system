@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('claims.urls')),
     path('ships/', include('ships.urls')),
+    path('port-activities/', include('port_activities.urls')),
 ]
 
 if settings.DEBUG:

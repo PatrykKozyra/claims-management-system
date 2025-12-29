@@ -1,0 +1,448 @@
+{% extends 'claims/base.html' %}
+{% load static %}
+
+{% block title %}Port Activities - All{% endblock %}
+
+{% block extra_css %}
+<style>
+    .activity-timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+
+    .activity-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+        border-left: 4px solid #dee2e6;
+    }
+
+    .activity-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+
+    .activity-card.status-actual {
+        border-left-color: #28a745;
+    }
+
+    .activity-card.status-estimated {
+        border-left-color: #ffc107;
+    }
+
+    .activity-card.status-mixed {
+        border-left-color: #17a2b8;
+    }
+
+    .activity-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .activity-body {
+        padding: 20px;
+    }
+
+    .activity-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        margin-right: 15px;
+    }
+
+    .activity-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: #6c757d;
+    }
+
+    .meta-item i {
+        margin-right: 5px;
+        color: #495057;
+    }
+
+    .duration-badge {
+        background: #f8f9fa;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .ship-voyage-group {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .ship-voyage-group h5 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 18px;
+    }
+
+    .ship-voyage-group p {
+        margin: 5px 0 0 0;
+        opacity: 0.9;
+        font-size: 14px;
+    }
+
+    .filter-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .stats-row {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        color: white;
+    }
+
+    .stat-box {
+        text-align: center;
+    }
+
+    .stat-box h3 {
+        font-size: 32px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .stat-box p {
+        margin: 5px 0 0 0;
+        opacity: 0.9;
+        font-size: 14px;
+    }
+
+    .badge-status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge-status.actual {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge-status.estimated {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .badge-status.mixed {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .timeline-line {
+        position: absolute;
+        left: 40px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #dee2e6, transparent);
+    }
+
+    .timeline-dot {
+        position: absolute;
+        left: 31px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid #dee2e6;
+        z-index: 1;
+    }
+
+    .dark-mode .activity-card {
+        background: #2d3748;
+        border-color: #4a5568;
+    }
+
+    .dark-mode .activity-header {
+        border-bottom-color: #4a5568;
+    }
+
+    .dark-mode .filter-panel {
+        background: #2d3748;
+    }
+
+    .dark-mode .meta-item {
+        color: #a0aec0;
+    }
+
+    @media (max-width: 768px) {
+        .activity-meta {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stats-row .col-md-4 {
+            margin-bottom: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-calendar-event"></i> Port Activities - Timeline</h2>
+            <p class="text-muted mb-0">Track vessel activities organized by ship and voyage</p>
+        </div>
+        <div>
+            {% if user.can_write %}
+            <a href="{% url 'port_activities:activity_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Activity
+            </a>
+            {% endif %}
+            {% if user.can_export %}
+            <a href="{% url 'port_activities:activity_export' %}" class="btn btn-success">
+                <i class="bi bi-file-earmark-excel"></i> Export
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Statistics Row -->
+    <div class="stats-row">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="stat-box">
+                    <h3>{{ total_activities }}</h3>
+                    <p>Total Activities</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-box">
+                    <h3>{{ actual_activities }}</h3>
+                    <p>Actual Dates</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-box">
+                    <h3>{{ estimated_activities }}</h3>
+                    <p>Estimated Dates</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div class="filter-panel">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label"><i class="bi bi-ship"></i> Ship</label>
+                <select name="ship" class="form-select">
+                    <option value="">All Ships</option>
+                    {% for ship in ships %}
+                    <option value="{{ ship.imo_number }}" {% if ship.imo_number == ship_filter %}selected{% endif %}>
+                        {{ ship.vessel_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><i class="bi bi-flag"></i> Activity Type</label>
+                <select name="activity_type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for activity_type in activity_types %}
+                    <option value="{{ activity_type.code }}" {% if activity_type.code == activity_type_filter %}selected{% endif %}>
+                        {{ activity_type.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><i class="bi bi-calendar-check"></i> Date Status</label>
+                <select name="date_status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="ACTUAL" {% if date_status_filter == 'ACTUAL' %}selected{% endif %}>Actual</option>
+                    <option value="ESTIMATED" {% if date_status_filter == 'ESTIMATED' %}selected{% endif %}>Estimated</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><i class="bi bi-search"></i> Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Ship, Port, Voyage..." value="{{ search_query }}">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-funnel"></i> Apply Filters
+                </button>
+                <a href="{% url 'port_activities:activity_list_all' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Activities Timeline -->
+    {% if activities %}
+    <div class="activity-timeline">
+        {% regroup activities by ship as ship_groups %}
+
+        {% for ship_group in ship_groups %}
+        <div class="ship-voyage-group">
+            <h5><i class="bi bi-ship"></i> {{ ship_group.grouper.vessel_name }}</h5>
+            <p>IMO: {{ ship_group.grouper.imo_number }} | {{ ship_group.grouper.vessel_type }}</p>
+        </div>
+
+        {% regroup ship_group.list by voyage as voyage_groups %}
+
+        {% for voyage_group in voyage_groups %}
+        {% if voyage_group.grouper %}
+        <div class="ms-4 mb-3">
+            <h6 class="text-muted">
+                <i class="bi bi-signpost"></i> Voyage: {{ voyage_group.grouper.voyage_number }}
+                {% if voyage_group.grouper.load_port %} | {{ voyage_group.grouper.load_port }}{% endif %}
+                {% if voyage_group.grouper.discharge_port %} → {{ voyage_group.grouper.discharge_port }}{% endif %}
+            </h6>
+        </div>
+        {% endif %}
+
+        {% for activity in voyage_group.list %}
+        <div class="ms-5">
+            <div class="activity-card {% if activity.is_fully_actual %}status-actual{% elif activity.is_fully_estimated %}status-estimated{% else %}status-mixed{% endif %}">
+                <div class="activity-header">
+                    <div class="d-flex align-items-center">
+                        <div class="activity-icon bg-{{ activity.activity_type.color_class }} bg-opacity-10 text-{{ activity.activity_type.color_class }}">
+                            <i class="bi {{ activity.activity_type.icon_class }}"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0">{{ activity.activity_type.name }}</h6>
+                            <small class="text-muted">{{ activity.activity_type.get_category_display }}</small>
+                        </div>
+                    </div>
+                    <div>
+                        {% if activity.is_fully_actual %}
+                        <span class="badge-status actual">Actual</span>
+                        {% elif activity.is_fully_estimated %}
+                        <span class="badge-status estimated">Estimated</span>
+                        {% else %}
+                        <span class="badge-status mixed">Mixed</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="activity-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <i class="bi bi-geo-alt text-primary"></i>
+                                <strong>Port:</strong> {{ activity.port_name }}
+                            </div>
+                            {% if activity.load_port %}
+                            <div class="mb-2">
+                                <i class="bi bi-box-seam text-success"></i>
+                                <strong>Load Port:</strong> {{ activity.load_port }}
+                            </div>
+                            {% endif %}
+                            {% if activity.discharge_port %}
+                            <div class="mb-2">
+                                <i class="bi bi-box-arrow-down text-warning"></i>
+                                <strong>Discharge Port:</strong> {{ activity.discharge_port }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <i class="bi bi-calendar-event text-info"></i>
+                                <strong>Start:</strong> {{ activity.start_datetime|date:"Y-m-d H:i" }}
+                                <span class="badge bg-{{ activity.start_date_status|lower }} text-white ms-1">
+                                    {{ activity.get_start_date_status_display }}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <i class="bi bi-calendar-check text-success"></i>
+                                <strong>End:</strong> {{ activity.end_datetime|date:"Y-m-d H:i" }}
+                                <span class="badge bg-{{ activity.end_date_status|lower }} text-white ms-1">
+                                    {{ activity.get_end_date_status_display }}
+                                </span>
+                            </div>
+                            <div>
+                                <i class="bi bi-clock text-secondary"></i>
+                                <strong>Duration:</strong>
+                                <span class="duration-badge">
+                                    {{ activity.duration_days }}d {{ activity.duration_hours|floatformat:1 }}h
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if activity.cargo_quantity %}
+                    <div class="mt-3">
+                        <i class="bi bi-inbox text-primary"></i>
+                        <strong>Cargo Quantity:</strong> {{ activity.cargo_quantity|floatformat:2 }} MT
+                    </div>
+                    {% endif %}
+
+                    {% if activity.notes %}
+                    <div class="mt-3 p-2 bg-light rounded">
+                        <small><i class="bi bi-sticky"></i> {{ activity.notes }}</small>
+                    </div>
+                    {% endif %}
+
+                    <div class="activity-meta mt-3 pt-3 border-top">
+                        <div class="meta-item">
+                            <i class="bi bi-person"></i>
+                            <span>{{ activity.created_by.get_full_name|default:activity.created_by.username }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="bi bi-clock-history"></i>
+                            <span>{{ activity.created_at|date:"Y-m-d H:i" }}</span>
+                        </div>
+                        <div class="ms-auto">
+                            <a href="{% url 'port_activities:activity_detail' activity.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                            {% if user.can_write %}
+                            <a href="{% url 'port_activities:activity_update' activity.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endfor %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No activities found matching your filters.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

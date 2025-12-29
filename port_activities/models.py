@@ -8,23 +8,47 @@ class ActivityType(models.Model):
     """Types of port activities"""
 
     CATEGORY_CHOICES = [
-        ('LOADING', 'Loading Operations'),
-        ('DISCHARGING', 'Discharging Operations'),
-        ('OFFHIRE', 'Off-hire Period'),
-        ('DRYDOCK', 'Dry-docking'),
-        ('STS', 'Ship-to-Ship Transfer'),
-        ('BUNKERING', 'Bunkering'),
-        ('WAITING', 'Waiting Time'),
-        ('OTHER', 'Other'),
+        ('CARGO_OPS', 'Cargo Operations'),
+        ('BALLASTING', 'Ballasting Operations'),
+        ('CLEANING', 'Cleaning & Preparation'),
+        ('BUNKERING', 'Bunkering & Supplies'),
+        ('MAINTENANCE', 'Maintenance & Repairs'),
+        ('OPERATIONAL', 'Operational Status'),
+        ('ADMINISTRATIVE', 'Administrative & Compliance'),
+        ('OFFHIRE', 'Off-hire Events'),
+        ('TRANSIT', 'Transit & Navigation'),
+        ('COMMERCIAL', 'Commercial Activities'),
     ]
 
-    name = models.CharField(max_length=100, unique=True)
+    # Activity codes matching your specifications
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        default='general',
+        help_text="Activity code (e.g., load, discharge, bunkering)"
+    )
+    name = models.CharField(max_length=100, help_text="Display name")
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    icon_class = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Bootstrap icon class for UI display"
+    )
+    color_class = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="CSS color class for UI display"
+    )
 
     class Meta:
         ordering = ['category', 'name']
+        indexes = [
+            models.Index(fields=['code']),
+            models.Index(fields=['category']),
+            models.Index(fields=['is_active']),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.get_category_display()})"

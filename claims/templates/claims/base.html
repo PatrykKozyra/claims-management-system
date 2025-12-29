@@ -378,7 +378,7 @@
                             <div class="collapse" id="portActivityMenu">
                                 <ul class="nav flex-column menu-group-items">
                                     <li class="nav-item">
-                                        <a class="nav-link placeholder" href="#" onclick="return false;">
+                                        <a class="nav-link {% if 'activity_list_all' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'port_activities:activity_list_all' %}">
                                             <i class="bi bi-list-ul"></i> All
                                         </a>
                                     </li>
