@@ -12,7 +12,7 @@
         </div>
         <div>
             {% if user.can_export %}
-            <a href="{% url 'ship_specifications_export' %}?{{ request.GET.urlencode }}" class="btn btn-success">
+            <a href="{% url 'ships:ship_specifications_export' %}?{{ request.GET.urlencode }}" class="btn btn-success">
                 <i class="bi bi-file-earmark-excel"></i> Export to Excel
             </a>
             {% endif %}
@@ -61,7 +61,7 @@
             <h5><i class="bi bi-funnel"></i> Filters</h5>
         </div>
         <div class="card-body">
-            <form method="get" action="{% url 'ship_specifications_list' %}" class="row g-3">
+            <form method="get" action="{% url 'ships:ship_specifications_list' %}" class="row g-3">
                 <div class="col-md-2">
                     <label class="form-label">Vessel Type</label>
                     <select name="vessel_type" class="form-select">
@@ -131,7 +131,7 @@
                 </div>
 
                 <div class="col-md-2 d-flex align-items-end">
-                    <a href="{% url 'ship_specifications_list' %}" class="btn btn-secondary w-100">
+                    <a href="{% url 'ships:ship_specifications_list' %}" class="btn btn-secondary w-100">
                         <i class="bi bi-x-circle"></i> Clear Filters
                     </a>
                 </div>
@@ -198,7 +198,7 @@
                                 {% endwith %}
                             </td>
                             <td>
-                                <a href="{% url 'ship_specification_detail' spec.imo_number %}" class="btn btn-sm btn-primary">
+                                <a href="{% url 'ships:ship_specification_detail' spec.imo_number %}" class="btn btn-sm btn-primary">
                                     <i class="bi bi-eye"></i> View Q88
                                 </a>
                             </td>
