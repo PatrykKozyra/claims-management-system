@@ -355,13 +355,13 @@
                             <div class="collapse" id="shipDataMenu">
                                 <ul class="nav flex-column menu-group-items">
                                     <li class="nav-item">
-                                        <a class="nav-link placeholder" href="#" onclick="return false;">
-                                            <i class="bi bi-building"></i> TC Fleet
+                                        <a class="nav-link {% if 'tc_fleet' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'tc_fleet_list' %}">
+                                            <i class="bi bi-ship"></i> TC Fleet
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link placeholder" href="#" onclick="return false;">
-                                            <i class="bi bi-card-list"></i> Ship Specification
+                                        <a class="nav-link {% if 'ship_specification' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'ship_specifications_list' %}">
+                                            <i class="bi bi-card-list"></i> Ship Specifications (Q88)
                                         </a>
                                     </li>
                                 </ul>

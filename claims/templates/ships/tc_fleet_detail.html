@@ -1,0 +1,278 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}{{ contract.ship_name }} - TC Fleet Contract{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-ship"></i> {{ contract.ship_name }}</h2>
+            <p class="text-muted mb-0">
+                IMO: {{ contract.imo_number }} | RADAR: <code>{{ contract.radar_deal_number }}</code>
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'ships:tc_fleet_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+            {% if user.is_staff %}
+            <a href="{% url 'admin:ships_tcfleet_change' contract.pk %}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Ship Name Change Warning -->
+    {% if contract.get_current_ship_name %}
+    <div class="alert alert-warning">
+        <h5><i class="bi bi-exclamation-triangle"></i> Ship Name Changed</h5>
+        <p class="mb-0">
+            <strong>Contract Name:</strong> {{ contract.ship_name }}<br>
+            <strong>Current Name:</strong> {{ contract.get_current_ship_name }}<br>
+            <small class="text-muted">IMO {{ contract.imo_number }} remains the same</small>
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Left Column: Contract Details -->
+        <div class="col-lg-8">
+            <!-- Ship Identification -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Ship Identification</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Ship Name:</strong> {{ contract.ship_name }}</p>
+                            <p><strong>IMO Number:</strong> {{ contract.imo_number }}</p>
+                            <p><strong>Ship Type:</strong> <span class="badge bg-info">{{ contract.get_ship_type_display }}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Trade:</strong> {{ contract.get_trade_display }}</p>
+                            <p><strong>Flag:</strong> {{ contract.flag }}</p>
+                            <p><strong>Built Year:</strong> {{ contract.built_year }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contract Status -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Contract Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Delivery Status:</strong>
+                                {% if contract.delivery_status == 'ON_TC' %}
+                                <span class="badge bg-success">{{ contract.get_delivery_status_display }}</span>
+                                {% elif contract.delivery_status == 'INCOMING_TC' %}
+                                <span class="badge bg-primary">{{ contract.get_delivery_status_display }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ contract.get_delivery_status_display }}</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Contract Status:</strong>
+                                {% if contract.contract_status == 'ACTIVE' %}
+                                <span class="badge bg-success">{{ contract.contract_status }}</span>
+                                {% elif contract.contract_status == 'INCOMING' %}
+                                <span class="badge bg-primary">{{ contract.contract_status }}</span>
+                                {% elif contract.contract_status == 'EXPIRING_SOON' %}
+                                <span class="badge bg-warning text-dark">{{ contract.contract_status }}</span>
+                                {% elif contract.contract_status == 'EXPIRED' %}
+                                <span class="badge bg-danger">{{ contract.contract_status }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ contract.contract_status }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>RADAR Deal Number:</strong> <code>{{ contract.radar_deal_number }}</code></p>
+                            <p><strong>Days Remaining:</strong>
+                                {% if contract.days_remaining > 0 %}
+                                    {% if contract.days_remaining <= 30 %}
+                                    <span class="text-danger fw-bold fs-5">{{ contract.days_remaining }} days</span>
+                                    {% elif contract.days_remaining <= 90 %}
+                                    <span class="text-warning fw-bold fs-5">{{ contract.days_remaining }} days</span>
+                                    {% else %}
+                                    <span class="text-success fw-bold fs-5">{{ contract.days_remaining }} days</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charter Details -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Charter Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Charter Length:</strong> {{ contract.charter_length_years }} years ({{ contract.charter_length_months|floatformat:0 }} months)</p>
+                            <p><strong>TC Rate (Monthly):</strong> <span class="text-success fw-bold">${{ contract.tc_rate_monthly|floatformat:2 }}</span></p>
+                            <p><strong>Total Contract Value:</strong> <span class="text-primary fw-bold">${{ contract.total_contract_value|floatformat:2 }}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Delivery Date:</strong> {{ contract.delivery_date|date:"d/m/Y" }}</p>
+                            <p><strong>Redelivery Date:</strong> {{ contract.redelivery_date|date:"d/m/Y" }}</p>
+                            <p><strong>TCP Date:</strong> {{ contract.tcp_date|date:"d/m/Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Owner & Technical Manager -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-building"></i> Owner & Technical Manager</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Owner</h6>
+                            <p class="mb-1"><strong>{{ contract.owner_name }}</strong></p>
+                            {% if contract.owner_email %}
+                            <p class="mb-0"><i class="bi bi-envelope"></i> <a href="mailto:{{ contract.owner_email }}">{{ contract.owner_email }}</a></p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Technical Manager</h6>
+                            <p class="mb-1"><strong>{{ contract.technical_manager|default:"Not specified" }}</strong></p>
+                            {% if contract.technical_manager_email %}
+                            <p class="mb-0"><i class="bi bi-envelope"></i> <a href="mailto:{{ contract.technical_manager_email }}">{{ contract.technical_manager_email }}</a></p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Broker Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-person-badge"></i> Broker Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Broker Name:</strong> {{ contract.broker_name|default:"-" }}</p>
+                            {% if contract.broker_email %}
+                            <p><strong>Email:</strong> <a href="mailto:{{ contract.broker_email }}">{{ contract.broker_email }}</a></p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if contract.broker_commission %}
+                            <p><strong>Commission:</strong> {{ contract.broker_commission }}%</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Locations & Technical -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Locations & Technical Specifications</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Delivery Location:</strong> {{ contract.delivery_location|default:"-" }}</p>
+                            <p><strong>Redelivery Location:</strong> {{ contract.redelivery_location|default:"-" }}</p>
+                            <p><strong>Bunkers Policy:</strong> {{ contract.get_bunkers_policy_display|default:"-" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Summer DWT:</strong> {{ contract.summer_dwt|floatformat:2 }} MT</p>
+                            {% if contract.next_drydock_date %}
+                            <p><strong>Next Dry-Dock:</strong> {{ contract.next_drydock_date|date:"d/m/Y" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Internal Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-person-circle"></i> Internal Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Trader Name:</strong> {{ contract.trader_name|default:"-" }}</p>
+                    {% if contract.notes %}
+                    <p><strong>Notes:</strong></p>
+                    <div class="alert alert-light">{{ contract.notes|linebreaks }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Contract History & Audit -->
+        <div class="col-lg-4">
+            <!-- Ship Contract History -->
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Contract History for IMO {{ contract.imo_number }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        <small>All contracts for this ship. <a href="{% url 'ships:tc_fleet_by_ship' contract.imo_number %}">View full timeline</a></small>
+                    </p>
+                    {% if contract_history %}
+                    <div class="list-group">
+                        {% for hist in contract_history|slice:":5" %}
+                        <a href="{% url 'ships:tc_fleet_detail' hist.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ hist.ship_name }}</h6>
+                                <small>
+                                    {% if hist.delivery_status == 'ON_TC' %}
+                                    <span class="badge bg-success">On TC</span>
+                                    {% elif hist.delivery_status == 'INCOMING_TC' %}
+                                    <span class="badge bg-primary">Incoming</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Redelivered</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <p class="mb-1"><small>{{ hist.delivery_date|date:"d/m/Y" }} - {{ hist.redelivery_date|date:"d/m/Y" }}</small></p>
+                            <small class="text-muted"><code>{{ hist.radar_deal_number }}</code></small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% if contract_history.count > 5 %}
+                    <a href="{% url 'ships:tc_fleet_by_ship' contract.imo_number %}" class="btn btn-sm btn-outline-primary mt-3 w-100">
+                        View All {{ contract_history.count }} Contracts
+                    </a>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-muted">No other contracts found for this ship.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Audit Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Audit Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Created:</strong> {{ contract.created_at|date:"d/m/Y H:i" }}</p>
+                    {% if contract.created_by %}
+                    <p><strong>Created By:</strong> {{ contract.created_by.get_full_name|default:contract.created_by.username }}</p>
+                    {% endif %}
+                    <p><strong>Last Updated:</strong> {{ contract.updated_at|date:"d/m/Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

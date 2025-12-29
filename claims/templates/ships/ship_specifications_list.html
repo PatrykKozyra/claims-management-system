@@ -1,0 +1,230 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}Ship Specifications (Q88){% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-ship"></i> Ship Specifications (Q88)</h2>
+            <p class="text-muted mb-0">Technical and operational data for TC Fleet vessels</p>
+        </div>
+        <div>
+            {% if user.can_export %}
+            <a href="{% url 'ship_specifications_export' %}?{{ request.GET.urlencode }}" class="btn btn-success">
+                <i class="bi bi-file-earmark-excel"></i> Export to Excel
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Ships</h5>
+                    <h2>{{ total_ships }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Crude Tankers</h5>
+                    <h2>{{ crude_tankers }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Product Tankers</h5>
+                    <h2>{{ product_tankers }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Chemical Tankers</h5>
+                    <h2>{{ chemical_tankers }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="bi bi-funnel"></i> Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url 'ship_specifications_list' %}" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">Vessel Type</label>
+                    <select name="vessel_type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for vtype in vessel_types %}
+                        <option value="{{ vtype }}" {% if vtype == vessel_type_filter %}selected{% endif %}>
+                            {{ vtype|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Flag</label>
+                    <select name="flag" class="form-select">
+                        <option value="">All Flags</option>
+                        {% for flag in flags %}
+                        <option value="{{ flag }}" {% if flag == flag_filter %}selected{% endif %}>
+                            {{ flag }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Coating</label>
+                    <select name="coating" class="form-select">
+                        <option value="">All Coatings</option>
+                        {% for coating in coatings %}
+                        <option value="{{ coating }}" {% if coating == coating_filter %}selected{% endif %}>
+                            {{ coating|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Fuel Type</label>
+                    <select name="fuel_type" class="form-select">
+                        <option value="">All Fuels</option>
+                        {% for fuel in fuel_types %}
+                        <option value="{{ fuel }}" {% if fuel == fuel_type_filter %}selected{% endif %}>
+                            {{ fuel }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">TC Status</label>
+                    <select name="tc_status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="active" {% if tc_status_filter == 'active' %}selected{% endif %}>On TC</option>
+                        <option value="inactive" {% if tc_status_filter == 'inactive' %}selected{% endif %}>No Active Contract</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Apply Filters
+                    </button>
+                </div>
+
+                <div class="col-md-10">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" placeholder="Search by vessel name, IMO, owner, classification society..." value="{{ search_query }}">
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{% url 'ship_specifications_list' %}" class="btn btn-secondary w-100">
+                        <i class="bi bi-x-circle"></i> Clear Filters
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="bi bi-table"></i> Ship Specifications ({{ specifications.count }})</h5>
+        </div>
+        <div class="card-body">
+            {% if specifications %}
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Vessel Name</th>
+                            <th>IMO</th>
+                            <th>Type</th>
+                            <th>Built</th>
+                            <th>Flag</th>
+                            <th>DWT (MT)</th>
+                            <th>LOA (m)</th>
+                            <th>Cargo Cap (m³)</th>
+                            <th>Coating</th>
+                            <th>Speed (kts)</th>
+                            <th>Fuel Type</th>
+                            <th>TC Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for spec in specifications %}
+                        <tr>
+                            <td><strong>{{ spec.vessel_name }}</strong></td>
+                            <td><code>{{ spec.imo_number }}</code></td>
+                            <td>
+                                {% if spec.vessel_type == 'CRUDE' %}
+                                <span class="badge bg-danger">{{ spec.get_vessel_type_display }}</span>
+                                {% elif spec.vessel_type == 'PRODUCT' %}
+                                <span class="badge bg-info">{{ spec.get_vessel_type_display }}</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">{{ spec.get_vessel_type_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ spec.built_year }}</td>
+                            <td>{{ spec.flag }}</td>
+                            <td>{{ spec.summer_deadweight|floatformat:0 }}</td>
+                            <td>{{ spec.length_overall|floatformat:2 }}</td>
+                            <td>{{ spec.total_cargo_capacity|floatformat:0 }}</td>
+                            <td>{{ spec.get_cargo_tank_coating_display }}</td>
+                            <td>{{ spec.service_speed_laden|floatformat:1 }}</td>
+                            <td>{{ spec.get_fuel_type_display }}</td>
+                            <td>
+                                {% with active_contract=spec.get_active_tc_contract %}
+                                {% if active_contract %}
+                                <span class="badge bg-success">On TC</span><br>
+                                <small class="text-muted">Until {{ active_contract.redelivery_date|date:"d/m/Y" }}</small>
+                                {% else %}
+                                <span class="badge bg-secondary">No Active Contract</span>
+                                {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td>
+                                <a href="{% url 'ship_specification_detail' spec.imo_number %}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye"></i> View Q88
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No ship specifications found. Please add ship specifications or adjust your filters.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.table-responsive {
+    max-height: 600px;
+    overflow-y: auto;
+}
+thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+</style>
+{% endblock %}

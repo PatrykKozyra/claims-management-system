@@ -1,0 +1,695 @@
+{% extends 'claims/base.html' %}
+
+{% block title %}Q88 - {{ spec.vessel_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-file-text"></i> Q88 Specification - {{ spec.vessel_name }}</h2>
+            <p class="text-muted mb-0">IMO: {{ spec.imo_number }} | Built: {{ spec.built_year }} | Flag: {{ spec.flag }}</p>
+        </div>
+        <div>
+            <a href="{% url 'ship_specifications_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+            {% if user.is_staff %}
+            <a href="{% url 'admin:ships_shipspecification_change' spec.pk %}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- TC Contract Status Banner -->
+    {% if active_contract %}
+    <div class="alert alert-success mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="alert-heading"><i class="bi bi-check-circle"></i> Currently On Time Charter</h5>
+                <p class="mb-0">
+                    <strong>Owner:</strong> {{ active_contract.owner_name }} |
+                    <strong>Delivery:</strong> {{ active_contract.delivery_date|date:"d/m/Y" }} |
+                    <strong>Redelivery:</strong> {{ active_contract.redelivery_date|date:"d/m/Y" }} |
+                    <strong>Days Remaining:</strong> {{ active_contract.days_remaining }}
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'tc_fleet_detail' active_contract.pk %}" class="btn btn-success">
+                    <i class="bi bi-file-earmark-text"></i> View TC Contract
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" id="specTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="identification-tab" data-bs-toggle="tab" data-bs-target="#identification" type="button">
+                <i class="bi bi-card-heading"></i> Identification
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="dimensions-tab" data-bs-toggle="tab" data-bs-target="#dimensions" type="button">
+                <i class="bi bi-rulers"></i> Dimensions
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="cargo-tab" data-bs-toggle="tab" data-bs-target="#cargo" type="button">
+                <i class="bi bi-box-seam"></i> Cargo
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="machinery-tab" data-bs-toggle="tab" data-bs-target="#machinery" type="button">
+                <i class="bi bi-gear"></i> Machinery
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="safety-tab" data-bs-toggle="tab" data-bs-target="#safety" type="button">
+                <i class="bi bi-shield-check"></i> Safety
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="operational-tab" data-bs-toggle="tab" data-bs-target="#operational" type="button">
+                <i class="bi bi-sliders"></i> Operational
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="commercial-tab" data-bs-toggle="tab" data-bs-target="#commercial" type="button">
+                <i class="bi bi-building"></i> Commercial
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="contracts-tab" data-bs-toggle="tab" data-bs-target="#contracts" type="button">
+                <i class="bi bi-file-earmark-text"></i> TC Contracts
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="specTabsContent">
+
+        <!-- IDENTIFICATION TAB -->
+        <div class="tab-pane fade show active" id="identification" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-card-heading"></i> Vessel Identification</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted">Vessel Name</label>
+                            <p class="fw-bold fs-5">{{ spec.vessel_name }}</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted">IMO Number</label>
+                            <p class="fw-bold fs-5"><code>{{ spec.imo_number }}</code></p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted">Call Sign</label>
+                            <p class="fw-bold">{{ spec.call_sign|default:"N/A" }}</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Flag</label>
+                            <p class="fw-bold">{{ spec.flag }}</p>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Port of Registry</label>
+                            <p>{{ spec.port_of_registry|default:"N/A" }}</p>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Official Number</label>
+                            <p>{{ spec.official_number|default:"N/A" }}</p>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Vessel Type</label>
+                            <p>
+                                {% if spec.vessel_type == 'CRUDE' %}
+                                <span class="badge bg-danger fs-6">{{ spec.get_vessel_type_display }}</span>
+                                {% elif spec.vessel_type == 'PRODUCT' %}
+                                <span class="badge bg-info fs-6">{{ spec.get_vessel_type_display }}</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark fs-6">{{ spec.get_vessel_type_display }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Built Year</label>
+                            <p class="fw-bold">{{ spec.built_year }}</p>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Built Country</label>
+                            <p>{{ spec.built_country|default:"N/A" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Shipyard</label>
+                            <p>{{ spec.shipyard|default:"N/A" }}</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Classification Society</label>
+                            <p class="fw-bold">{{ spec.classification_society|default:"N/A" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Class Notation</label>
+                            <p>{{ spec.class_notation|default:"N/A" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DIMENSIONS TAB -->
+        <div class="tab-pane fade" id="dimensions" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="bi bi-rulers"></i> Dimensions & Tonnages</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary mb-3"><i class="bi bi-arrows-expand"></i> Principal Dimensions</h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Length Overall (LOA)</label>
+                            <p class="fw-bold fs-5">{{ spec.length_overall|floatformat:2 }} m</p>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Length BP (LBP)</label>
+                            <p class="fw-bold fs-5">{{ spec.length_between_perpendiculars|floatformat:2|default:"N/A" }} m</p>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Breadth Moulded</label>
+                            <p class="fw-bold fs-5">{{ spec.breadth_moulded|floatformat:2 }} m</p>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Depth Moulded</label>
+                            <p class="fw-bold fs-5">{{ spec.depth_moulded|floatformat:2 }} m</p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="text-primary mb-3"><i class="bi bi-water"></i> Draft & Deadweight</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted">Summer Draft</label>
+                            <p class="fw-bold fs-5">{{ spec.summer_draft|floatformat:2 }} m</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted">Summer Deadweight</label>
+                            <p class="fw-bold fs-5 text-success">{{ spec.summer_deadweight|floatformat:0 }} MT</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted">Lightweight</label>
+                            <p class="fw-bold fs-5">{{ spec.lightweight|floatformat:0 }} MT</p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="text-primary mb-3"><i class="bi bi-box"></i> Tonnages</h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Gross Tonnage (GT)</label>
+                            <p class="fw-bold">{{ spec.gross_tonnage|floatformat:2 }}</p>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Net Tonnage (NT)</label>
+                            <p class="fw-bold">{{ spec.net_tonnage|floatformat:2 }}</p>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Suez Canal Tonnage</label>
+                            <p>{{ spec.suez_canal_tonnage|floatformat:2|default:"N/A" }}</p>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="text-muted">Panama Canal Tonnage</label>
+                            <p>{{ spec.panama_canal_tonnage|floatformat:2|default:"N/A" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <strong><i class="bi bi-calculator"></i> Calculated Displacement:</strong>
+                        {{ spec.displacement|floatformat:0 }} MT (DWT + Lightweight)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARGO TAB -->
+        <div class="tab-pane fade" id="cargo" role="tabpanel">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-3">
+                        <div class="card-header bg-warning text-dark">
+                            <h5><i class="bi bi-box-seam"></i> Cargo Capacity</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="text-muted">Total Cargo Capacity (98%)</label>
+                                    <p class="fw-bold fs-4 text-success">{{ spec.total_cargo_capacity|floatformat:0 }} m³</p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="text-muted">Number of Cargo Tanks</label>
+                                    <p class="fw-bold fs-4">{{ spec.number_of_cargo_tanks }}</p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="text-muted">Average per Tank</label>
+                                    <p class="fw-bold fs-4">{{ spec.cargo_capacity_per_tank|floatformat:0 }} m³</p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted">Segregated Ballast Tanks Capacity</label>
+                                    <p class="fw-bold">{{ spec.segregated_ballast_tanks_capacity|floatformat:0|default:"N/A" }} m³</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted">Slop Tank Capacity</label>
+                                    <p class="fw-bold">{{ spec.slop_tank_capacity|floatformat:0|default:"N/A" }} m³</p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="text-muted">Cargo Tank Coating</label>
+                                    <p><span class="badge bg-secondary fs-6">{{ spec.get_cargo_tank_coating_display }}</span></p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="text-muted">Cargo Heating Capability</label>
+                                    <p>
+                                        {% if spec.cargo_heating_capability %}
+                                        <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary fs-6"><i class="bi bi-x-circle"></i> No</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="text-muted">Maximum Heating Temperature</label>
+                                    <p class="fw-bold">{{ spec.maximum_heating_temperature|floatformat:1|default:"N/A" }} °C</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5><i class="bi bi-arrow-repeat"></i> Cargo Handling Systems</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted">Number of Cargo Pumps</label>
+                                    <p class="fw-bold fs-5">{{ spec.number_of_cargo_pumps }}</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted">Cargo Pump Capacity</label>
+                                    <p class="fw-bold fs-5">{{ spec.cargo_pump_capacity|floatformat:0 }} m³/h</p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="text-muted">Inert Gas System (IGS)</label>
+                                    <p>
+                                        {% if spec.inert_gas_system %}
+                                        <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-danger fs-6"><i class="bi bi-x-circle"></i> No</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="text-muted">Crude Oil Washing (COW)</label>
+                                    <p>
+                                        {% if spec.crude_oil_washing %}
+                                        <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-danger fs-6"><i class="bi bi-x-circle"></i> No</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="text-muted">Vapor Recovery System (VRS)</label>
+                                    <p>
+                                        {% if spec.vapor_recovery_system %}
+                                        <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-danger fs-6"><i class="bi bi-x-circle"></i> No</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted">Cargo Manifold Size</label>
+                                    <p class="fw-bold">{{ spec.cargo_manifold_size|floatformat:2 }} inches</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="text-muted">Manifold Pressure Rating</label>
+                                    <p class="fw-bold">{{ spec.cargo_manifold_pressure_rating|floatformat:2|default:"N/A" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MACHINERY TAB -->
+        <div class="tab-pane fade" id="machinery" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5><i class="bi bi-gear"></i> Machinery & Performance</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary mb-3"><i class="bi bi-cpu"></i> Main Engine</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Main Engine Type</label>
+                            <p class="fw-bold">{{ spec.main_engine_type }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Engine Builder</label>
+                            <p class="fw-bold">{{ spec.main_engine_builder|default:"N/A" }}</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="text-muted">Main Engine Power</label>
+                            <p class="fw-bold fs-4 text-success">{{ spec.main_engine_power|floatformat:0 }} kW</p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="text-primary mb-3"><i class="bi bi-speedometer"></i> Speed & Performance</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Service Speed (Laden)</label>
+                            <p class="fw-bold fs-4">{{ spec.service_speed_laden|floatformat:1 }} knots</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Service Speed (Ballast)</label>
+                            <p class="fw-bold fs-4">{{ spec.service_speed_ballast|floatformat:1 }} knots</p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="text-primary mb-3"><i class="bi bi-fuel-pump"></i> Fuel Consumption</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted">Fuel Consumption (Laden)</label>
+                            <p class="fw-bold fs-5 text-danger">{{ spec.fuel_consumption_laden|floatformat:1 }} T/day</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted">Fuel Consumption (Ballast)</label>
+                            <p class="fw-bold fs-5 text-warning">{{ spec.fuel_consumption_ballast|floatformat:1 }} T/day</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted">Fuel Type</label>
+                            <p><span class="badge bg-primary fs-6">{{ spec.get_fuel_type_display }}</span></p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="text-primary mb-3"><i class="bi bi-arrows-move"></i> Thrusters</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Bow Thruster</label>
+                            <p>
+                                {% if spec.bow_thruster %}
+                                <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> Fitted</span>
+                                {% else %}
+                                <span class="badge bg-secondary fs-6"><i class="bi bi-x-circle"></i> Not Fitted</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Stern Thruster</label>
+                            <p>
+                                {% if spec.stern_thruster %}
+                                <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> Fitted</span>
+                                {% else %}
+                                <span class="badge bg-secondary fs-6"><i class="bi bi-x-circle"></i> Not Fitted</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SAFETY TAB -->
+        <div class="tab-pane fade" id="safety" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5><i class="bi bi-shield-check"></i> Environmental & Safety</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary mb-3"><i class="bi bi-shield-fill-check"></i> Hull & Ice Class</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Double Hull</label>
+                            <p>
+                                {% if spec.double_hull %}
+                                <span class="badge bg-success fs-5"><i class="bi bi-check-circle"></i> Double Hull</span>
+                                {% else %}
+                                <span class="badge bg-danger fs-5"><i class="bi bi-exclamation-triangle"></i> Single Hull</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Ice Class</label>
+                            <p class="fw-bold">{{ spec.ice_class|default:"No Ice Class" }}</p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="text-primary mb-3"><i class="bi bi-file-earmark-text"></i> Certificates Expiry</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Oil Pollution Prevention Certificate (IOPP)</label>
+                            <p class="fw-bold">
+                                {% if spec.oil_pollution_prevention_certificate_expiry %}
+                                {{ spec.oil_pollution_prevention_certificate_expiry|date:"d/m/Y" }}
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Safety Management Certificate (SMC)</label>
+                            <p class="fw-bold">
+                                {% if spec.safety_management_certificate_expiry %}
+                                {{ spec.safety_management_certificate_expiry|date:"d/m/Y" }}
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Safety Equipment Certificate</label>
+                            <p class="fw-bold">
+                                {% if spec.safety_equipment_certificate_expiry %}
+                                {{ spec.safety_equipment_certificate_expiry|date:"d/m/Y" }}
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">International Oil Pollution Certificate</label>
+                            <p class="fw-bold">
+                                {% if spec.international_oil_pollution_certificate_expiry %}
+                                {{ spec.international_oil_pollution_certificate_expiry|date:"d/m/Y" }}
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Ship Sanitation Certificate</label>
+                            <p class="fw-bold">
+                                {% if spec.ship_sanitation_certificate_expiry %}
+                                {{ spec.ship_sanitation_certificate_expiry|date:"d/m/Y" }}
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPERATIONAL TAB -->
+        <div class="tab-pane fade" id="operational" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="bi bi-sliders"></i> Operational Requirements</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary mb-3"><i class="bi bi-water"></i> Freeboard & Air Draft</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Minimum Freeboard (Laden)</label>
+                            <p class="fw-bold">{{ spec.minimum_freeboard_laden|floatformat:2|default:"N/A" }} m</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Maximum Allowed Draft Restriction</label>
+                            <p class="fw-bold">{{ spec.maximum_allowed_draft_restriction|floatformat:2|default:"N/A" }} m</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Air Draft (Ballast)</label>
+                            <p class="fw-bold">{{ spec.air_draft_ballast|floatformat:2|default:"N/A" }} m</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Air Draft (Laden)</label>
+                            <p class="fw-bold">{{ spec.air_draft_laden|floatformat:2|default:"N/A" }} m</p>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="text-primary mb-3"><i class="bi bi-exclamation-triangle"></i> Restrictions & Requirements</h6>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="text-muted">Port Restrictions</label>
+                            <div class="alert alert-warning">
+                                {{ spec.port_restrictions|default:"No port restrictions specified"|linebreaksbr }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="text-muted">Special Requirements</label>
+                            <div class="alert alert-info">
+                                {{ spec.special_requirements|default:"No special requirements specified"|linebreaksbr }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMMERCIAL TAB -->
+        <div class="tab-pane fade" id="commercial" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="bi bi-building"></i> Commercial Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Owner Name</label>
+                            <p class="fw-bold fs-5">{{ spec.owner_name }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Operator Name</label>
+                            <p class="fw-bold fs-5">{{ spec.operator_name|default:"N/A" }}</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Commercial Manager</label>
+                            <p class="fw-bold">{{ spec.commercial_manager|default:"N/A" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Technical Manager</label>
+                            <p class="fw-bold">{{ spec.technical_manager }}</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="text-muted">P&I Club</label>
+                            <p class="fw-bold">{{ spec.p_and_i_club|default:"N/A" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TC CONTRACTS TAB -->
+        <div class="tab-pane fade" id="contracts" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-file-earmark-text"></i> Time Charter Contract History</h5>
+                </div>
+                <div class="card-body">
+                    {% if tc_contracts %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Owner</th>
+                                    <th>Delivery Date</th>
+                                    <th>Redelivery Date</th>
+                                    <th>Charter Length</th>
+                                    <th>TC Rate/Month</th>
+                                    <th>Total Value</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for contract in tc_contracts %}
+                                <tr>
+                                    <td>
+                                        {% if contract.delivery_status == 'ON_TC' %}
+                                        <span class="badge bg-success">{{ contract.get_delivery_status_display }}</span>
+                                        {% elif contract.delivery_status == 'INCOMING_TC' %}
+                                        <span class="badge bg-primary">{{ contract.get_delivery_status_display }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ contract.get_delivery_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ contract.owner_name }}</td>
+                                    <td>{{ contract.delivery_date|date:"d/m/Y" }}</td>
+                                    <td>{{ contract.redelivery_date|date:"d/m/Y" }}</td>
+                                    <td>{{ contract.charter_length_years }} years</td>
+                                    <td>${{ contract.tc_rate_monthly|floatformat:0 }}</td>
+                                    <td>${{ contract.total_contract_value|floatformat:0 }}</td>
+                                    <td>
+                                        <a href="{% url 'tc_fleet_detail' contract.pk %}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> No TC contracts found for this vessel.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+.nav-tabs .nav-link {
+    color: #495057;
+    font-weight: 500;
+}
+.nav-tabs .nav-link.active {
+    background-color: #0d6efd;
+    color: white !important;
+    border-color: #0d6efd;
+}
+.nav-tabs .nav-link:hover {
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+</style>
+{% endblock %}

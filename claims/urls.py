@@ -45,4 +45,15 @@ urlpatterns = [
     path('users/<int:user_id>/', views.user_profile, name='user_profile'),
     path('users/<int:user_id>/edit/', views.user_profile_edit, name='user_profile_edit'),
     path('toggle-dark-mode/', views.toggle_dark_mode, name='toggle_dark_mode'),
+
+    # TC Fleet (imported from ships app)
+    path('tc-fleet/', views.tc_fleet_list, name='tc_fleet_list'),
+    path('tc-fleet/<int:pk>/', views.tc_fleet_detail, name='tc_fleet_detail'),
+    path('tc-fleet/ship/<str:imo_number>/', views.tc_fleet_by_ship, name='tc_fleet_by_ship'),
+    path('tc-fleet/export/', views.tc_fleet_export, name='tc_fleet_export'),
+
+    # Ship Specifications (Q88)
+    path('ship-specifications/', views.ship_specifications_list, name='ship_specifications_list'),
+    path('ship-specifications/<str:imo_number>/', views.ship_specification_detail, name='ship_specification_detail'),
+    path('ship-specifications/export/', views.ship_specifications_export, name='ship_specifications_export'),
 ]
