@@ -93,11 +93,22 @@ class Voyage(models.Model):
         ('COMPLETED', 'Completed'),
     ]
 
+    CHARTER_TYPE_CHOICES = [
+        ('SPOT', 'Spot - 3rd Party Ship'),
+        ('TRADED', 'Traded - Time Charter Ship'),
+    ]
+
     # RADAR system fields
     radar_voyage_id = models.CharField(max_length=100, unique=True, help_text="Unique ID from RADAR")
     voyage_number = models.CharField(max_length=100)
     vessel_name = models.CharField(max_length=200)
     imo_number = models.CharField(max_length=20, blank=True)
+    charter_type = models.CharField(
+        max_length=10,
+        choices=CHARTER_TYPE_CHOICES,
+        default='SPOT',
+        help_text="SPOT = 3rd party ship, TRADED = Time Charter ship"
+    )
 
     # Voyage details
     charter_party = models.CharField(max_length=100)

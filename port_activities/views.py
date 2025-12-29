@@ -161,65 +161,14 @@ def activity_list_by_voyage(request, voyage_id):
 
 
 # ============================================
-# ACTIVITY CRUD VIEWS
+# ACTIVITY CRUD VIEWS (READ-ONLY FROM RADAR)
 # ============================================
 
 @login_required
 def activity_create(request):
-    """Create a new port activity"""
-    if request.method == 'POST':
-        # Get form data
-        ship_imo = request.POST.get('ship')
-        voyage_id = request.POST.get('voyage')
-        activity_type_code = request.POST.get('activity_type')
-        port_name = request.POST.get('port_name')
-        load_port = request.POST.get('load_port', '')
-        discharge_port = request.POST.get('discharge_port', '')
-        start_datetime = request.POST.get('start_datetime')
-        start_date_status = request.POST.get('start_date_status')
-        end_datetime = request.POST.get('end_datetime')
-        end_date_status = request.POST.get('end_date_status')
-        cargo_quantity = request.POST.get('cargo_quantity')
-        notes = request.POST.get('notes', '')
-
-        # Get related objects
-        ship = get_object_or_404(Ship, imo_number=ship_imo)
-        activity_type = get_object_or_404(ActivityType, code=activity_type_code)
-        voyage = get_object_or_404(Voyage, id=voyage_id) if voyage_id else None
-
-        # Create activity
-        activity = PortActivity.objects.create(
-            ship=ship,
-            voyage=voyage,
-            activity_type=activity_type,
-            port_name=port_name,
-            load_port=load_port,
-            discharge_port=discharge_port,
-            start_datetime=start_datetime,
-            start_date_status=start_date_status,
-            end_datetime=end_datetime,
-            end_date_status=end_date_status,
-            cargo_quantity=Decimal(cargo_quantity) if cargo_quantity else None,
-            notes=notes,
-            created_by=request.user
-        )
-
-        messages.success(request, f'Activity "{activity.activity_type.name}" created successfully.')
-        return redirect('port_activities:activity_list_all')
-
-    # GET request - show form
-    ships = Ship.objects.filter(is_active=True).order_by('vessel_name')
-    voyages = Voyage.objects.all().select_related('ship_owner').order_by('-laycan_start')[:100]
-    activity_types = ActivityType.objects.filter(is_active=True).order_by('category', 'name')
-
-    context = {
-        'ships': ships,
-        'voyages': voyages,
-        'activity_types': activity_types,
-        'date_status_choices': PortActivity.DATE_STATUS_CHOICES,
-    }
-
-    return render(request, 'port_activities/activity_form.html', context)
+    """Disabled - Activities are pulled from RADAR system"""
+    messages.error(request, 'Activities are automatically pulled from RADAR system. Manual creation is not allowed.')
+    return redirect('port_activities:activity_list_all')
 
 
 @login_required
@@ -241,36 +190,20 @@ def activity_detail(request, pk):
 
 @login_required
 def activity_update(request, pk):
-    """Update an existing port activity"""
+    """Update only user comments - all other fields are read-only from RADAR"""
     activity = get_object_or_404(PortActivity, pk=pk)
 
-    if not request.user.can_write():
-        messages.error(request, 'You do not have permission to edit activities.')
-        return redirect('port_activities:activity_detail', pk=pk)
-
     if request.method == 'POST':
-        # Update activity fields
-        activity.port_name = request.POST.get('port_name')
-        activity.load_port = request.POST.get('load_port', '')
-        activity.discharge_port = request.POST.get('discharge_port', '')
-        activity.start_datetime = request.POST.get('start_datetime')
-        activity.start_date_status = request.POST.get('start_date_status')
-        activity.end_datetime = request.POST.get('end_datetime')
-        activity.end_date_status = request.POST.get('end_date_status')
+        # Only update user_comments field
+        activity.user_comments = request.POST.get('user_comments', '')
+        activity.save(update_fields=['user_comments', 'updated_at'])
 
-        cargo_quantity = request.POST.get('cargo_quantity')
-        activity.cargo_quantity = Decimal(cargo_quantity) if cargo_quantity else None
-        activity.notes = request.POST.get('notes', '')
-
-        activity.save()
-
-        messages.success(request, 'Activity updated successfully.')
+        messages.success(request, 'Comment updated successfully.')
         return redirect('port_activities:activity_detail', pk=pk)
 
     # GET request - show form
     context = {
         'activity': activity,
-        'date_status_choices': PortActivity.DATE_STATUS_CHOICES,
     }
 
     return render(request, 'port_activities/activity_edit.html', context)
@@ -278,23 +211,9 @@ def activity_update(request, pk):
 
 @login_required
 def activity_delete(request, pk):
-    """Delete a port activity"""
-    activity = get_object_or_404(PortActivity, pk=pk)
-
-    if not request.user.can_write():
-        messages.error(request, 'You do not have permission to delete activities.')
-        return redirect('port_activities:activity_detail', pk=pk)
-
-    if request.method == 'POST':
-        activity.delete()
-        messages.success(request, 'Activity deleted successfully.')
-        return redirect('port_activities:activity_list_all')
-
-    context = {
-        'activity': activity,
-    }
-
-    return render(request, 'port_activities/activity_confirm_delete.html', context)
+    """Disabled - Activities are managed by RADAR system"""
+    messages.error(request, 'Activities cannot be deleted. They are managed by RADAR system.')
+    return redirect('port_activities:activity_list_all')
 
 
 # ============================================

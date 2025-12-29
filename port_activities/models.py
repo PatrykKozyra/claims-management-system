@@ -130,7 +130,16 @@ class PortActivity(models.Model):
         blank=True,
         help_text="Cargo quantity (tons)"
     )
-    notes = models.TextField(blank=True)
+    notes = models.TextField(
+        blank=True,
+        help_text="System notes from RADAR (read-only)"
+    )
+
+    # User Comments (only editable field)
+    user_comments = models.TextField(
+        blank=True,
+        help_text="User comments - only editable field"
+    )
 
     # RADAR sync tracking
     radar_activity_id = models.CharField(
