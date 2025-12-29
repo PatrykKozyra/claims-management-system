@@ -29,6 +29,7 @@ def activity_list_all(request):
     activity_type_filter = request.GET.get('activity_type', '')
     category_filter = request.GET.get('category', '')
     date_status_filter = request.GET.get('date_status', '')
+    charter_type_filter = request.GET.get('charter_type', '')
     start_date_from = request.GET.get('start_date_from', '')
     start_date_to = request.GET.get('start_date_to', '')
     search_query = request.GET.get('search', '')
@@ -65,6 +66,9 @@ def activity_list_all(request):
                 Q(start_date_status='ESTIMATED') | Q(end_date_status='ESTIMATED')
             )
 
+    if charter_type_filter:
+        activities = activities.filter(voyage__charter_type=charter_type_filter)
+
     if start_date_from:
         activities = activities.filter(start_datetime__gte=start_date_from)
 
@@ -80,8 +84,8 @@ def activity_list_all(request):
             Q(notes__icontains=search_query)
         )
 
-    # Order by ship, voyage, then start datetime
-    activities = activities.order_by('ship__vessel_name', 'voyage__id', 'start_datetime')
+    # Order by ship name ASC, voyage number DESC, activity start datetime ASC
+    activities = activities.order_by('ship__vessel_name', '-voyage__voyage_number', 'start_datetime')
 
     # Calculate statistics
     total_activities = activities.count()
@@ -115,6 +119,7 @@ def activity_list_all(request):
         'activity_type_filter': activity_type_filter,
         'category_filter': category_filter,
         'date_status_filter': date_status_filter,
+        'charter_type_filter': charter_type_filter,
         'start_date_from': start_date_from,
         'start_date_to': start_date_to,
         'search_query': search_query,

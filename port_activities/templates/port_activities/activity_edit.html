@@ -1,0 +1,153 @@
+{% extends 'claims/base.html' %}
+{% load static %}
+
+{% block title %}Edit Comment - {{ activity.activity_type.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-chat-left-text"></i> {% if activity.user_comments %}Edit Comment{% else %}Add Comment{% endif %}</h2>
+            <p class="text-muted mb-0">
+                {{ activity.activity_type.name }} - {{ activity.ship.vessel_name }}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'port_activities:activity_detail' activity.pk %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Cancel
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Comment Form -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-pencil"></i> User Comment</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Note:</strong> All activity data is pulled from the RADAR system and is read-only.
+                        Only comments can be edited to add your notes or observations.
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="user_comments" class="form-label">
+                                <strong>Your Comment:</strong>
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="user_comments"
+                                name="user_comments"
+                                rows="6"
+                                placeholder="Enter your comments or observations about this activity..."
+                            >{{ activity.user_comments }}</textarea>
+                            <div class="form-text">
+                                Use this field to add notes, observations, or any relevant information about this activity.
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Comment
+                            </button>
+                            <a href="{% url 'port_activities:activity_detail' activity.pk %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Summary Sidebar -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Activity Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Activity Type:</strong><br>
+                        <i class="bi {{ activity.activity_type.icon_class }} text-{{ activity.activity_type.color_class }}"></i>
+                        {{ activity.activity_type.name }}<br>
+                        <span class="badge bg-secondary mt-1">{{ activity.activity_type.get_category_display }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Ship:</strong><br>
+                        {{ activity.ship.vessel_name }}<br>
+                        <small class="text-muted">IMO: {{ activity.ship.imo_number }}</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Voyage:</strong><br>
+                        {% if activity.voyage %}
+                            {{ activity.voyage.voyage_number }}<br>
+                            <small class="text-muted">
+                                {% if activity.voyage.charter_type == 'TRADED' %}
+                                    <span class="badge bg-success">TRADED</span>
+                                {% else %}
+                                    <span class="badge bg-info">SPOT</span>
+                                {% endif %}
+                            </small>
+                        {% else %}
+                            <em class="text-muted">No voyage assigned</em>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Port:</strong><br>
+                        {{ activity.port_name }}
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <strong>Start:</strong><br>
+                        {{ activity.start_datetime|date:"F d, Y H:i" }}<br>
+                        <span class="badge {% if activity.start_date_status == 'ACTUAL' %}bg-success{% else %}bg-warning{% endif %}">
+                            {{ activity.get_start_date_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>End:</strong><br>
+                        {{ activity.end_datetime|date:"F d, Y H:i" }}<br>
+                        <span class="badge {% if activity.end_date_status == 'ACTUAL' %}bg-success{% else %}bg-warning{% endif %}">
+                            {{ activity.get_end_date_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Duration:</strong><br>
+                        {{ activity.duration_days }} days, {{ activity.duration_hours|floatformat:1 }} hours
+                    </div>
+
+                    {% if activity.cargo_quantity %}
+                    <div class="mb-3">
+                        <strong>Cargo:</strong><br>
+                        {{ activity.cargo_quantity|floatformat:2 }} MT
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if activity.notes %}
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> RADAR Notes</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ activity.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

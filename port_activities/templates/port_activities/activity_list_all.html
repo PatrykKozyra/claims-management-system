@@ -5,116 +5,176 @@
 
 {% block extra_css %}
 <style>
-    .activity-timeline {
-        position: relative;
-        padding: 20px 0;
-    }
-
-    .activity-card {
+    /* Modern Pivot Table Styling */
+    .pivot-table {
         background: white;
         border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        margin-bottom: 20px;
-        transition: all 0.3s ease;
-        border-left: 4px solid #dee2e6;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        overflow: hidden;
     }
 
-    .activity-card:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-        transform: translateY(-2px);
+    .pivot-table table {
+        width: 100%;
+        margin: 0;
     }
 
-    .activity-card.status-actual {
-        border-left-color: #28a745;
-    }
-
-    .activity-card.status-estimated {
-        border-left-color: #ffc107;
-    }
-
-    .activity-card.status-mixed {
-        border-left-color: #17a2b8;
-    }
-
-    .activity-header {
-        padding: 15px 20px;
-        border-bottom: 1px solid #f0f0f0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .activity-body {
-        padding: 20px;
-    }
-
-    .activity-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        margin-right: 15px;
-    }
-
-    .activity-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        margin-top: 15px;
-    }
-
-    .meta-item {
-        display: flex;
-        align-items: center;
-        font-size: 13px;
-        color: #6c757d;
-    }
-
-    .meta-item i {
-        margin-right: 5px;
-        color: #495057;
-    }
-
-    .duration-badge {
-        background: #f8f9fa;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-    .ship-voyage-group {
+    .pivot-table th {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 15px 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-    }
-
-    .ship-voyage-group h5 {
-        margin: 0;
         font-weight: 600;
-        font-size: 18px;
+        padding: 15px 12px;
+        text-align: left;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: none;
     }
 
-    .ship-voyage-group p {
-        margin: 5px 0 0 0;
-        opacity: 0.9;
+    .pivot-table td {
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
         font-size: 14px;
     }
 
-    .filter-panel {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 25px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    /* Ship Row (Level 1) */
+    .ship-row {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transition: all 0.3s ease;
+        font-weight: 600;
     }
 
+    .ship-row:hover {
+        background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+    }
+
+    .ship-row td {
+        padding: 16px 12px;
+        border: none;
+        color: white;
+    }
+
+    .expand-btn {
+        cursor: pointer;
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        margin-right: 10px;
+        text-align: center;
+        line-height: 24px;
+        font-size: 16px;
+        font-weight: bold;
+        user-select: none;
+        transition: all 0.2s ease;
+    }
+
+    .expand-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+    }
+
+    /* Voyage Row (Level 2) */
+    .voyage-row {
+        background: #f8f9fa;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        display: none !important;
+    }
+
+    .voyage-row.visible {
+        display: table-row !important;
+    }
+
+    .voyage-row:hover {
+        background: #e9ecef;
+    }
+
+    .voyage-row td {
+        padding: 14px 12px 14px 40px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .voyage-row .expand-btn {
+        background: #dee2e6;
+        color: #495057;
+        font-size: 14px;
+        width: 22px;
+        height: 22px;
+        line-height: 22px;
+    }
+
+    .voyage-row .expand-btn:hover {
+        background: #ced4da;
+    }
+
+    /* Activity Row (Level 3) */
+    .activity-row {
+        background: white;
+        transition: all 0.2s ease;
+        display: none !important;
+    }
+
+    .activity-row.visible {
+        display: table-row !important;
+    }
+
+    .activity-row:hover {
+        background: #f8f9fa;
+    }
+
+    .activity-row td {
+        padding: 10px 12px 10px 80px;
+    }
+
+    .activity-row td:first-child {
+        font-weight: 500;
+    }
+
+    /* Badges and Status */
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-badge.actual {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .status-badge.estimated {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .status-badge.mixed {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .category-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+        background: #e9ecef;
+        color: #495057;
+    }
+
+    /* Action Buttons */
+    .btn-action {
+        padding: 5px 12px;
+        font-size: 12px;
+        border-radius: 6px;
+        margin-right: 5px;
+    }
+
+    /* Stats Row */
     .stats-row {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: 12px;
@@ -128,87 +188,59 @@
     }
 
     .stat-box h3 {
-        font-size: 32px;
+        font-size: 36px;
         font-weight: 700;
         margin: 0;
     }
 
     .stat-box p {
-        margin: 5px 0 0 0;
+        margin: 8px 0 0 0;
         opacity: 0.9;
         font-size: 14px;
+        font-weight: 500;
     }
 
-    .badge-status {
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+    /* Filter Panel */
+    .filter-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
 
-    .badge-status.actual {
-        background: #d4edda;
-        color: #155724;
+    /* Duration Display */
+    .duration-display {
+        font-size: 12px;
+        color: #6c757d;
     }
 
-    .badge-status.estimated {
-        background: #fff3cd;
-        color: #856404;
-    }
-
-    .badge-status.mixed {
-        background: #d1ecf1;
-        color: #0c5460;
-    }
-
-    .timeline-line {
-        position: absolute;
-        left: 40px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: linear-gradient(to bottom, #dee2e6, transparent);
-    }
-
-    .timeline-dot {
-        position: absolute;
-        left: 31px;
+    /* Comment Indicators */
+    .comment-indicator {
+        display: inline-block;
         width: 20px;
         height: 20px;
+        background: #ffc107;
         border-radius: 50%;
-        background: white;
-        border: 3px solid #dee2e6;
-        z-index: 1;
+        text-align: center;
+        line-height: 20px;
+        font-size: 11px;
+        color: white;
+        font-weight: bold;
     }
 
-    .dark-mode .activity-card {
-        background: #2d3748;
-        border-color: #4a5568;
+    .no-comment {
+        opacity: 0.3;
     }
 
-    .dark-mode .activity-header {
-        border-bottom-color: #4a5568;
+    /* Control Buttons */
+    .control-buttons {
+        margin-bottom: 15px;
     }
 
-    .dark-mode .filter-panel {
-        background: #2d3748;
-    }
-
-    .dark-mode .meta-item {
-        color: #a0aec0;
-    }
-
-    @media (max-width: 768px) {
-        .activity-meta {
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .stats-row .col-md-4 {
-            margin-bottom: 15px;
-        }
+    .control-buttons .btn {
+        font-size: 13px;
+        padding: 8px 16px;
     }
 </style>
 {% endblock %}
@@ -260,7 +292,7 @@
         <form method="get" class="row g-3">
             <div class="col-md-3">
                 <label class="form-label"><i class="bi bi-ship"></i> Ship</label>
-                <select name="ship" class="form-select">
+                <select name="ship" class="form-select form-select-sm">
                     <option value="">All Ships</option>
                     {% for ship in ships %}
                     <option value="{{ ship.imo_number }}" {% if ship.imo_number == ship_filter %}selected{% endif %}>
@@ -271,7 +303,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label"><i class="bi bi-flag"></i> Activity Type</label>
-                <select name="activity_type" class="form-select">
+                <select name="activity_type" class="form-select form-select-sm">
                     <option value="">All Types</option>
                     {% for activity_type in activity_types %}
                     <option value="{{ activity_type.code }}" {% if activity_type.code == activity_type_filter %}selected{% endif %}>
@@ -282,169 +314,167 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label"><i class="bi bi-calendar-check"></i> Date Status</label>
-                <select name="date_status" class="form-select">
+                <select name="date_status" class="form-select form-select-sm">
                     <option value="">All Status</option>
                     <option value="ACTUAL" {% if date_status_filter == 'ACTUAL' %}selected{% endif %}>Actual</option>
                     <option value="ESTIMATED" {% if date_status_filter == 'ESTIMATED' %}selected{% endif %}>Estimated</option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-2">
+                <label class="form-label"><i class="bi bi-briefcase"></i> Charter Type</label>
+                <select name="charter_type" class="form-select form-select-sm">
+                    <option value="">All Types</option>
+                    <option value="SPOT" {% if charter_type_filter == 'SPOT' %}selected{% endif %}>SPOT</option>
+                    <option value="TRADED" {% if charter_type_filter == 'TRADED' %}selected{% endif %}>TRADED</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label"><i class="bi bi-search"></i> Search</label>
-                <input type="text" name="search" class="form-control" placeholder="Ship, Port, Voyage..." value="{{ search_query }}">
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Ship, Port, Voyage..." value="{{ search_query }}">
             </div>
             <div class="col-12">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary btn-sm">
                     <i class="bi bi-funnel"></i> Apply Filters
                 </button>
-                <a href="{% url 'port_activities:activity_list_all' %}" class="btn btn-secondary">
+                <a href="{% url 'port_activities:activity_list_all' %}" class="btn btn-secondary btn-sm">
                     <i class="bi bi-x-circle"></i> Clear
                 </a>
             </div>
         </form>
     </div>
 
-    <!-- Activities Timeline -->
+    <!-- Control Buttons -->
+    <div class="control-buttons">
+        <button onclick="expandAll()" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-arrows-expand"></i> Expand All
+        </button>
+        <button onclick="collapseAll()" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrows-collapse"></i> Collapse All
+        </button>
+    </div>
+
+    <!-- Pivot Table -->
     {% if activities %}
-    <div class="activity-timeline">
-        {% regroup activities by ship as ship_groups %}
+    <div class="pivot-table">
+        <table class="table table-hover mb-0" id="pivotTable">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Ship / Voyage / Activity</th>
+                    <th style="width: 12%;">Port</th>
+                    <th style="width: 12%;">Category</th>
+                    <th style="width: 15%;">Start Date/Time</th>
+                    <th style="width: 15%;">End Date/Time</th>
+                    <th style="width: 8%;">Duration</th>
+                    <th style="width: 8%;">Status</th>
+                    <th style="width: 5%;" class="text-center">💬</th>
+                    <th style="width: 10%;" class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% regroup activities by ship as ship_groups %}
+                {% for ship_group in ship_groups %}
+                    {% regroup ship_group.list by voyage as voyage_groups %}
+                    <!-- Ship Row (Level 1) -->
+                    <tr class="ship-row">
+                        <td colspan="9">
+                            <span class="expand-btn" onclick="toggleShip({{ forloop.counter }}, event)">+</span>
+                            <i class="bi bi-ship"></i>
+                            <strong>{{ ship_group.grouper.vessel_name }}</strong>
+                            <small class="ms-2 opacity-75">IMO: {{ ship_group.grouper.imo_number }} | {{ ship_group.grouper.vessel_type }}</small>
+                            <span class="badge bg-light text-dark ms-2">{{ voyage_groups|length }} voyages</span>
+                        </td>
+                    </tr>
 
-        {% for ship_group in ship_groups %}
-        <div class="ship-voyage-group">
-            <h5><i class="bi bi-ship"></i> {{ ship_group.grouper.vessel_name }}</h5>
-            <p>IMO: {{ ship_group.grouper.imo_number }} | {{ ship_group.grouper.vessel_type }}</p>
-        </div>
 
-        {% regroup ship_group.list by voyage as voyage_groups %}
+                    {% for voyage_group in voyage_groups %}
+                        <!-- Voyage Row (Level 2) -->
+                        <tr class="voyage-row ship-{{ forloop.parentloop.counter }}-voyage">
+                            <td colspan="9">
+                                <span class="expand-btn" onclick="toggleVoyage({{ forloop.parentloop.counter }}, {{ forloop.counter }}, event)">+</span>
+                                <i class="bi bi-signpost"></i>
+                                {% if voyage_group.grouper %}
+                                    <strong>{{ voyage_group.grouper.voyage_number }}</strong>
+                                    <small class="ms-2 text-muted">
+                                        {% if voyage_group.grouper.charter_type == 'TRADED' %}
+                                            <span class="badge bg-success">TRADED</span>
+                                        {% else %}
+                                            <span class="badge bg-info">SPOT</span>
+                                        {% endif %}
+                                        {{ voyage_group.grouper.load_port }} → {{ voyage_group.grouper.discharge_port }}
+                                    </small>
+                                    <span class="badge bg-light text-dark ms-2">{{ voyage_group.list|length }} activities</span>
+                                {% else %}
+                                    <em class="text-muted">No Voyage Assigned</em>
+                                    <span class="badge bg-light text-dark ms-2">{{ voyage_group.list|length }} activities</span>
+                                {% endif %}
+                            </td>
+                        </tr>
 
-        {% for voyage_group in voyage_groups %}
-        {% if voyage_group.grouper %}
-        <div class="ms-4 mb-3">
-            <h6 class="text-muted">
-                <i class="bi bi-signpost"></i> Voyage: {{ voyage_group.grouper.voyage_number }}
-                {% if voyage_group.grouper.load_port %} | {{ voyage_group.grouper.load_port }}{% endif %}
-                {% if voyage_group.grouper.discharge_port %} → {{ voyage_group.grouper.discharge_port }}{% endif %}
-            </h6>
-        </div>
-        {% endif %}
-
-        {% for activity in voyage_group.list %}
-        <div class="ms-5">
-            <div class="activity-card {% if activity.is_fully_actual %}status-actual{% elif activity.is_fully_estimated %}status-estimated{% else %}status-mixed{% endif %}">
-                <div class="activity-header">
-                    <div class="d-flex align-items-center">
-                        <div class="activity-icon bg-{{ activity.activity_type.color_class }} bg-opacity-10 text-{{ activity.activity_type.color_class }}">
-                            <i class="bi {{ activity.activity_type.icon_class }}"></i>
-                        </div>
-                        <div>
-                            <h6 class="mb-0">{{ activity.activity_type.name }}</h6>
-                            <small class="text-muted">{{ activity.activity_type.get_category_display }}</small>
-                        </div>
-                    </div>
-                    <div>
-                        {% if activity.is_fully_actual %}
-                        <span class="badge-status actual">Actual</span>
-                        {% elif activity.is_fully_estimated %}
-                        <span class="badge-status estimated">Estimated</span>
-                        {% else %}
-                        <span class="badge-status mixed">Mixed</span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="activity-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-2">
-                                <i class="bi bi-geo-alt text-primary"></i>
-                                <strong>Port:</strong> {{ activity.port_name }}
-                            </div>
-                            {% if activity.load_port %}
-                            <div class="mb-2">
-                                <i class="bi bi-box-seam text-success"></i>
-                                <strong>Load Port:</strong> {{ activity.load_port }}
-                            </div>
-                            {% endif %}
-                            {% if activity.discharge_port %}
-                            <div class="mb-2">
-                                <i class="bi bi-box-arrow-down text-warning"></i>
-                                <strong>Discharge Port:</strong> {{ activity.discharge_port }}
-                            </div>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-2">
-                                <i class="bi bi-calendar-event text-info"></i>
-                                <strong>Start:</strong> {{ activity.start_datetime|date:"Y-m-d H:i" }}
-                                <span class="badge bg-{{ activity.start_date_status|lower }} text-white ms-1">
+                        <!-- Activity Rows (Level 3) -->
+                        {% for activity in voyage_group.list %}
+                        <tr class="activity-row ship-{{ forloop.parentloop.parentloop.counter }}-voyage-{{ forloop.parentloop.counter }}-activity">
+                            <td>
+                                <i class="bi {{ activity.activity_type.icon_class }} text-{{ activity.activity_type.color_class }}"></i>
+                                {{ activity.activity_type.name }}
+                            </td>
+                            <td>
+                                <small>{{ activity.port_name }}</small>
+                            </td>
+                            <td>
+                                <span class="category-badge">{{ activity.activity_type.get_category_display }}</span>
+                            </td>
+                            <td>
+                                <div>{{ activity.start_datetime|date:"M d, Y" }}</div>
+                                <small class="text-muted">{{ activity.start_datetime|date:"H:i" }}</small>
+                                <span class="status-badge ms-1 {% if activity.start_date_status == 'ACTUAL' %}actual{% else %}estimated{% endif %}">
                                     {{ activity.get_start_date_status_display }}
                                 </span>
-                            </div>
-                            <div class="mb-2">
-                                <i class="bi bi-calendar-check text-success"></i>
-                                <strong>End:</strong> {{ activity.end_datetime|date:"Y-m-d H:i" }}
-                                <span class="badge bg-{{ activity.end_date_status|lower }} text-white ms-1">
+                            </td>
+                            <td>
+                                <div>{{ activity.end_datetime|date:"M d, Y" }}</div>
+                                <small class="text-muted">{{ activity.end_datetime|date:"H:i" }}</small>
+                                <span class="status-badge ms-1 {% if activity.end_date_status == 'ACTUAL' %}actual{% else %}estimated{% endif %}">
                                     {{ activity.get_end_date_status_display }}
                                 </span>
-                            </div>
-                            <div>
-                                <i class="bi bi-clock text-secondary"></i>
-                                <strong>Duration:</strong>
-                                <span class="duration-badge">
-                                    {{ activity.duration_days }}d {{ activity.duration_hours|floatformat:1 }}h
+                            </td>
+                            <td>
+                                <div><strong>{{ activity.duration_days }}d</strong></div>
+                                <small class="duration-display">{{ activity.duration_hours|floatformat:1 }}h</small>
+                            </td>
+                            <td>
+                                {% if activity.is_fully_actual %}
+                                <span class="status-badge actual">Actual</span>
+                                {% elif activity.is_fully_estimated %}
+                                <span class="status-badge estimated">Est</span>
+                                {% else %}
+                                <span class="status-badge mixed">Mixed</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if activity.user_comments %}
+                                <span class="comment-indicator" title="Has user comment">
+                                    <i class="bi bi-chat-fill"></i>
                                 </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if activity.cargo_quantity %}
-                    <div class="mt-3">
-                        <i class="bi bi-inbox text-primary"></i>
-                        <strong>Cargo Quantity:</strong> {{ activity.cargo_quantity|floatformat:2 }} MT
-                    </div>
-                    {% endif %}
-
-                    {% if activity.notes %}
-                    <div class="mt-3 p-2 bg-light rounded">
-                        <small><i class="bi bi-info-circle text-primary"></i> <strong>RADAR Notes:</strong> {{ activity.notes }}</small>
-                    </div>
-                    {% endif %}
-
-                    {% if activity.user_comments %}
-                    <div class="mt-3 p-2 bg-warning bg-opacity-10 border border-warning rounded">
-                        <small><i class="bi bi-chat-left-text text-warning"></i> <strong>User Comment:</strong> {{ activity.user_comments }}</small>
-                    </div>
-                    {% endif %}
-
-                    <div class="activity-meta mt-3 pt-3 border-top">
-                        <div class="meta-item">
-                            <i class="bi bi-person"></i>
-                            <span>{{ activity.created_by.get_full_name|default:activity.created_by.username }}</span>
-                        </div>
-                        <div class="meta-item">
-                            <i class="bi bi-clock-history"></i>
-                            <span>{{ activity.created_at|date:"Y-m-d H:i" }}</span>
-                        </div>
-                        {% if activity.radar_activity_id %}
-                        <div class="meta-item">
-                            <i class="bi bi-cloud text-info"></i>
-                            <span>{{ activity.radar_activity_id }}</span>
-                        </div>
-                        {% endif %}
-                        <div class="ms-auto">
-                            <a href="{% url 'port_activities:activity_detail' activity.pk %}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> View
-                            </a>
-                            <a href="{% url 'port_activities:activity_update' activity.pk %}" class="btn btn-sm btn-outline-warning">
-                                <i class="bi bi-chat-left-text"></i> {% if activity.user_comments %}Edit Comment{% else %}Add Comment{% endif %}
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-        {% endfor %}
-        {% endfor %}
+                                {% else %}
+                                <span class="comment-indicator no-comment" title="No comment">
+                                    <i class="bi bi-chat"></i>
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'port_activities:activity_detail' activity.pk %}" class="btn btn-outline-primary btn-action">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'port_activities:activity_update' activity.pk %}" class="btn btn-outline-warning btn-action">
+                                    <i class="bi bi-chat-left-text"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     {% else %}
     <div class="alert alert-info">
@@ -452,4 +482,105 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+// Initialize - hide all voyage and activity rows on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Hide all voyage rows
+    const allVoyageRows = document.querySelectorAll('.voyage-row');
+    allVoyageRows.forEach(function(row) {
+        row.style.display = 'none';
+    });
+
+    // Hide all activity rows
+    const allActivityRows = document.querySelectorAll('.activity-row');
+    allActivityRows.forEach(function(row) {
+        row.style.display = 'none';
+    });
+});
+
+// Toggle ship - show/hide all voyages under this ship
+function toggleShip(shipIndex, evt) {
+    const voyageRows = document.querySelectorAll('.ship-' + shipIndex + '-voyage');
+    const btn = evt ? evt.target : event.target;
+    const isVisible = voyageRows[0] && voyageRows[0].style.display !== 'none';
+
+    if (isVisible) {
+        // Collapse ship - hide voyages and activities
+        voyageRows.forEach(function(row) {
+            row.style.display = 'none';
+            const voyageBtn = row.querySelector('.expand-btn');
+            if (voyageBtn && voyageBtn.textContent === '−') {
+                voyageBtn.textContent = '+';
+            }
+        });
+
+        const activityRows = document.querySelectorAll('[class*="ship-' + shipIndex + '-voyage-"][class*="-activity"]');
+        activityRows.forEach(function(row) {
+            row.style.display = 'none';
+        });
+
+        btn.textContent = '+';
+    } else {
+        // Expand ship - show voyages
+        voyageRows.forEach(function(row) {
+            row.style.display = 'table-row';
+        });
+        btn.textContent = '−';
+    }
+}
+
+// Toggle voyage - show/hide all activities under this voyage
+function toggleVoyage(shipIndex, voyageIndex, evt) {
+    const activityRows = document.querySelectorAll('.ship-' + shipIndex + '-voyage-' + voyageIndex + '-activity');
+    const btn = evt ? evt.target : event.target;
+    const isVisible = activityRows[0] && activityRows[0].style.display !== 'none';
+
+    if (isVisible) {
+        // Collapse voyage - hide activities
+        activityRows.forEach(function(row) {
+            row.style.display = 'none';
+        });
+        btn.textContent = '+';
+    } else {
+        // Expand voyage - show activities
+        activityRows.forEach(function(row) {
+            row.style.display = 'table-row';
+        });
+        btn.textContent = '−';
+    }
+}
+
+// Expand all ships and voyages
+function expandAll() {
+    document.querySelectorAll('.voyage-row').forEach(function(row) {
+        row.style.display = 'table-row';
+    });
+    document.querySelectorAll('.ship-row .expand-btn').forEach(function(btn) {
+        btn.textContent = '−';
+    });
+    document.querySelectorAll('.activity-row').forEach(function(row) {
+        row.style.display = 'table-row';
+    });
+    document.querySelectorAll('.voyage-row .expand-btn').forEach(function(btn) {
+        btn.textContent = '−';
+    });
+}
+
+// Collapse all ships and voyages
+function collapseAll() {
+    document.querySelectorAll('.voyage-row').forEach(function(row) {
+        row.style.display = 'none';
+    });
+    document.querySelectorAll('.ship-row .expand-btn').forEach(function(btn) {
+        btn.textContent = '+';
+    });
+    document.querySelectorAll('.activity-row').forEach(function(row) {
+        row.style.display = 'none';
+    });
+    document.querySelectorAll('.voyage-row .expand-btn').forEach(function(btn) {
+        btn.textContent = '+';
+    });
+}
+</script>
 {% endblock %}

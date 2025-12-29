@@ -1,0 +1,196 @@
+{% extends 'claims/base.html' %}
+{% load static %}
+
+{% block title %}Activity Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi {{ activity.activity_type.icon_class }} text-{{ activity.activity_type.color_class }}"></i> {{ activity.activity_type.name }}</h2>
+            <p class="text-muted mb-0">
+                <i class="bi bi-cloud-download"></i> Activity data from RADAR system (Read-only)
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'port_activities:activity_list_all' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+            <a href="{% url 'port_activities:activity_update' activity.pk %}" class="btn btn-warning">
+                <i class="bi bi-chat-left-text"></i> {% if activity.user_comments %}Edit Comment{% else %}Add Comment{% endif %}
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Activity Information -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Activity Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Ship:</strong><br>
+                            {{ activity.ship.vessel_name }}<br>
+                            <small class="text-muted">IMO: {{ activity.ship.imo_number }}</small>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Voyage:</strong><br>
+                            {% if activity.voyage %}
+                                {{ activity.voyage.voyage_number }}<br>
+                                <small class="text-muted">
+                                    {% if activity.voyage.charter_type == 'TRADED' %}
+                                        <span class="badge bg-success">TRADED</span>
+                                    {% else %}
+                                        <span class="badge bg-info">SPOT</span>
+                                    {% endif %}
+                                    {{ activity.voyage.load_port }} → {{ activity.voyage.discharge_port }}
+                                </small>
+                            {% else %}
+                                <em class="text-muted">No voyage assigned</em>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Activity Type:</strong><br>
+                            <span class="badge bg-secondary">{{ activity.activity_type.get_category_display }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Port:</strong><br>
+                            {{ activity.port_name }}
+                        </div>
+                    </div>
+
+                    {% if activity.load_port or activity.discharge_port %}
+                    <div class="row mb-3">
+                        {% if activity.load_port %}
+                        <div class="col-md-6">
+                            <strong>Load Port:</strong><br>
+                            {{ activity.load_port }}
+                        </div>
+                        {% endif %}
+                        {% if activity.discharge_port %}
+                        <div class="col-md-6">
+                            <strong>Discharge Port:</strong><br>
+                            {{ activity.discharge_port }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Start Date/Time:</strong><br>
+                            {{ activity.start_datetime|date:"F d, Y H:i" }}<br>
+                            <span class="badge {% if activity.start_date_status == 'ACTUAL' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ activity.get_start_date_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>End Date/Time:</strong><br>
+                            {{ activity.end_datetime|date:"F d, Y H:i" }}<br>
+                            <span class="badge {% if activity.end_date_status == 'ACTUAL' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ activity.get_end_date_status_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Duration:</strong><br>
+                            <h4 class="mb-0">{{ activity.duration_days }} days, {{ activity.duration_hours|floatformat:1 }} hours</h4>
+                        </div>
+                        {% if activity.cargo_quantity %}
+                        <div class="col-md-6">
+                            <strong>Cargo Quantity:</strong><br>
+                            <h4 class="mb-0">{{ activity.cargo_quantity|floatformat:2 }} MT</h4>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if activity.notes %}
+                    <hr>
+                    <div class="alert alert-info">
+                        <strong><i class="bi bi-info-circle"></i> RADAR Notes:</strong><br>
+                        {{ activity.notes }}
+                    </div>
+                    {% endif %}
+
+                    {% if activity.user_comments %}
+                    <div class="alert alert-warning">
+                        <strong><i class="bi bi-chat-left-text"></i> User Comment:</strong><br>
+                        {{ activity.user_comments }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Metadata Sidebar -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Metadata</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>RADAR Activity ID:</strong><br>
+                        <code>{{ activity.radar_activity_id|default:"-" }}</code>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Last RADAR Sync:</strong><br>
+                        {% if activity.last_radar_sync %}
+                            {{ activity.last_radar_sync|date:"F d, Y H:i" }}
+                        {% else %}
+                            <em class="text-muted">Never synced</em>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <strong>Created By:</strong><br>
+                        {{ activity.created_by.get_full_name|default:activity.created_by.username }}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Created At:</strong><br>
+                        {{ activity.created_at|date:"F d, Y H:i" }}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Last Updated:</strong><br>
+                        {{ activity.updated_at|date:"F d, Y H:i" }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-chat-left-text"></i> Comments</h5>
+                </div>
+                <div class="card-body">
+                    {% if activity.user_comments %}
+                        <p>{{ activity.user_comments }}</p>
+                        <a href="{% url 'port_activities:activity_update' activity.pk %}" class="btn btn-warning btn-sm w-100">
+                            <i class="bi bi-pencil"></i> Edit Comment
+                        </a>
+                    {% else %}
+                        <p class="text-muted">No comments yet.</p>
+                        <a href="{% url 'port_activities:activity_update' activity.pk %}" class="btn btn-warning btn-sm w-100">
+                            <i class="bi bi-plus-circle"></i> Add Comment
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
