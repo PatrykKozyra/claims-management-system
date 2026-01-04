@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import Any
+
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -50,7 +53,7 @@ class ActivityType(models.Model):
             models.Index(fields=['is_active']),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} ({self.get_category_display()})"
 
 
@@ -180,10 +183,10 @@ class PortActivity(models.Model):
             models.Index(fields=['activity_type', 'start_datetime']),  # Activity reports
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.ship.vessel_name} - {self.activity_type.name} at {self.port_name}"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         # Auto-calculate duration
         if self.start_datetime and self.end_datetime:
             self.duration = self.end_datetime - self.start_datetime
@@ -194,7 +197,7 @@ class PortActivity(models.Model):
 
         super().save(*args, **kwargs)
 
-    def clean(self):
+    def clean(self) -> None:
         """Validate no overlapping activities for same ship"""
         if self.start_datetime and self.end_datetime:
             # Check for overlapping activities on same ship
@@ -210,29 +213,29 @@ class PortActivity(models.Model):
                 )
 
     @property
-    def duration_hours(self):
+    def duration_hours(self) -> float:
         """Get duration in hours"""
         return self.duration.total_seconds() / 3600 if self.duration else 0
 
     @property
-    def duration_days(self):
+    def duration_days(self) -> int:
         """Get duration in days"""
         return self.duration.days if self.duration else 0
 
     @property
-    def is_fully_actual(self):
+    def is_fully_actual(self) -> bool:
         """Check if both start and end dates are actual"""
         return (self.start_date_status == 'ACTUAL' and
                 self.end_date_status == 'ACTUAL')
 
     @property
-    def is_fully_estimated(self):
+    def is_fully_estimated(self) -> bool:
         """Check if both start and end dates are estimated"""
         return (self.start_date_status == 'ESTIMATED' and
                 self.end_date_status == 'ESTIMATED')
 
     @property
-    def date_status_display(self):
+    def date_status_display(self) -> str:
         """Get friendly display of date status"""
         if self.is_fully_actual:
             return "Actual"

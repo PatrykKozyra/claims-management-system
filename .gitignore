@@ -4,9 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
-venv/
-ENV/
 build/
 develop-eggs/
 dist/
@@ -23,17 +20,23 @@ wheels/
 .installed.cfg
 *.egg
 
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
 # Django
 *.log
-local_settings.py
-# db.sqlite3  # COMMENTED OUT - Including test data for easy deployment
+db.sqlite3
 db.sqlite3-journal
-# /media  # COMMENTED OUT - Including test user photos and documents
-/staticfiles
+media/
+staticfiles/
 
-# Environment
+# Environment Variables
 .env
-.venv
+.env.local
+.env.production
 
 # IDE
 .vscode/
@@ -46,9 +49,14 @@ db.sqlite3-journal
 .DS_Store
 Thumbs.db
 
-# Project specific
-*.pyc
-__pycache__/
-.pytest_cache/
+# Testing
 .coverage
 htmlcov/
+.pytest_cache/
+.tox/
+
+# Sensitive Files
+*.pem
+*.key
+*.crt
+secrets.json

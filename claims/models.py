@@ -1,3 +1,7 @@
+from __future__ import annotations
+from typing import Optional, Dict, Any
+from datetime import timedelta
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
@@ -25,28 +29,28 @@ class User(AbstractUser):
     created_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='users_created')
     bio = models.TextField(blank=True, help_text="Short biography")
 
-    def can_export(self):
+    def can_export(self) -> bool:
         return self.role in ['READ_EXPORT', 'WRITE', 'TEAM_LEAD', 'ADMIN']
 
-    def can_write(self):
+    def can_write(self) -> bool:
         return self.role in ['WRITE', 'TEAM_LEAD', 'ADMIN']
 
-    def is_admin_role(self):
+    def is_admin_role(self) -> bool:
         return self.role == 'ADMIN'
 
-    def is_team_lead(self):
+    def is_team_lead(self) -> bool:
         """Check if user has team lead or admin role"""
         return self.role in ['TEAM_LEAD', 'ADMIN']
 
-    def can_assign_voyages(self):
+    def can_assign_voyages(self) -> bool:
         """Check if user can assign voyages to others"""
         return self.role in ['TEAM_LEAD', 'ADMIN']
 
-    def get_assigned_voyages_count(self):
+    def get_assigned_voyages_count(self) -> int:
         """Count of voyages assigned to this user"""
         return self.assigned_voyages.count()
 
-    def get_closed_claims_count(self):
+    def get_closed_claims_count(self) -> int:
         """Count of claims that are paid (closed/recovered)"""
         return self.assigned_claims.filter(payment_status='PAID').count()
 
@@ -80,7 +84,7 @@ class ShipOwner(models.Model):
             models.Index(fields=['is_active', 'name']),  # Active owners list
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} ({self.code})"
 
 
@@ -180,10 +184,10 @@ class Voyage(models.Model):
             models.Index(fields=['assignment_status', 'created_at']),  # Unassigned voyages report
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.voyage_number} - {self.vessel_name}"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         # Optimistic Locking: Check for concurrent modifications
         if self.pk is not None:  # Only check for existing records
             # Get the current version from database
@@ -199,7 +203,7 @@ class Voyage(models.Model):
 
         super().save(*args, **kwargs)
 
-    def assign_to(self, analyst, assigned_by=None):
+    def assign_to(self, analyst: User, assigned_by: Optional[User] = None) -> None:
         """Assign voyage to analyst and create assignment history record"""
         # Store old assignment for history
         old_analyst = self.assigned_analyst
@@ -261,19 +265,19 @@ class VoyageAssignment(models.Model):
             models.Index(fields=['assigned_at']),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         status = "Active" if self.is_active else "Completed"
         return f"{self.voyage.voyage_number} → {self.assigned_to.get_full_name()} ({status})"
 
     @property
-    def duration(self):
+    def duration(self) -> timedelta:
         """Calculate duration of assignment"""
         if self.unassigned_at:
             return self.unassigned_at - self.assigned_at
         return timezone.now() - self.assigned_at
 
     @property
-    def duration_days(self):
+    def duration_days(self) -> int:
         """Get duration in days"""
         return self.duration.days
 
@@ -409,10 +413,10 @@ class Claim(models.Model):
             models.Index(fields=['voyage', 'status']),  # Voyage claim summary
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.claim_number} - {self.voyage.vessel_name} ({self.get_claim_type_display()})"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         # Optimistic Locking: Check for concurrent modifications
         if self.pk is not None:  # Only check for existing records
             # Get the current version from database
@@ -455,21 +459,21 @@ class Claim(models.Model):
         super().save(*args, **kwargs)
 
     @property
-    def outstanding_amount(self):
+    def outstanding_amount(self) -> Decimal:
         """Calculate outstanding amount"""
         return self.claim_amount - self.paid_amount
 
     @property
-    def vessel_name(self):
+    def vessel_name(self) -> str:
         """Get vessel name from voyage"""
         return self.voyage.vessel_name if self.voyage else "N/A"
 
     @property
-    def voyage_number(self):
+    def voyage_number(self) -> str:
         """Get voyage number from voyage"""
         return self.voyage.voyage_number if self.voyage else "N/A"
 
-    def can_edit(self, user):
+    def can_edit(self, user: User) -> bool:
         """Check if user can edit this claim"""
         if user.is_admin_role():
             return True
@@ -477,7 +481,7 @@ class Claim(models.Model):
             return user.can_write()
         return False
 
-    def can_delete(self, user):
+    def can_delete(self, user: User) -> bool:
         """Check if user can delete this claim"""
         return user.is_admin_role() or (self.status == 'DRAFT' and self.created_by == user and user.can_write())
 
@@ -526,12 +530,12 @@ class ClaimActivityLog(models.Model):
             models.Index(fields=['action', 'created_at']),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         claim_ref = self.claim.claim_number if self.claim else self.claim_number
         return f"{claim_ref} - {self.get_action_display()} by {self.user.username if self.user else 'System'}"
 
     @property
-    def action_icon(self):
+    def action_icon(self) -> str:
         """Get Bootstrap icon for action type"""
         icons = {
             'CREATED': 'plus-circle',
@@ -548,7 +552,7 @@ class ClaimActivityLog(models.Model):
         return icons.get(self.action, 'circle')
 
     @property
-    def action_color(self):
+    def action_color(self) -> str:
         """Get Bootstrap color class for action type"""
         colors = {
             'CREATED': 'success',
@@ -581,11 +585,11 @@ class Comment(models.Model):
             models.Index(fields=['user']),  # Comments by user
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Comment on {self.claim.claim_number} by {self.user.username}"
 
 
-def claim_document_path(instance, filename):
+def claim_document_path(instance: 'Document', filename: str) -> str:
     """
     Generate hierarchical path for document uploads.
     Path structure: voyages/{voyage_id}/claims/{claim_id}/documents/{filename}
@@ -624,9 +628,9 @@ class Document(models.Model):
             models.Index(fields=['uploaded_by']),  # Documents by user
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.title} - {self.claim.claim_number}"
 
     @property
-    def filename(self):
+    def filename(self) -> str:
         return self.file.name.split('/')[-1]

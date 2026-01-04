@@ -27,7 +27,20 @@
       "Bash(.\\\\venv\\\\Scripts\\\\python.exe:*)",
       "Bash(./venv/Scripts/python.exe manage.py check:*)",
       "Bash(./venv/Scripts/python.exe:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(.\\\\\\\\venv\\\\\\\\Scripts\\\\\\\\python.exe:*)",
+      "Bash(.\\\\\\\\venv\\\\\\\\Scripts\\\\\\\\python.exe -m pip:*)",
+      "Bash(python -m pip install:*)",
+      "Bash(python manage.py check:*)",
+      "Bash(python manage.py:*)",
+      "Bash(pytest:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(del temp_login.html)",
+      "Bash(.\\\\venv\\\\Scripts\\\\pip install -r requirements.txt)",
+      "Bash(.venvScriptspython.exe manage.py migrate)"
     ]
   }
 }

@@ -1,3 +1,7 @@
+from __future__ import annotations
+from typing import Optional, Any
+from django.db.models import QuerySet
+
 from django.db import models
 from django.utils import timezone
 from decimal import Decimal
@@ -136,17 +140,17 @@ class Ship(models.Model):
             models.Index(fields=['is_active', 'vessel_name']),  # Active vessels list
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.vessel_name} (IMO: {self.imo_number})"
 
-    def get_voyage_history(self):
+    def get_voyage_history(self) -> QuerySet:
         """Get all voyages for this ship (from claims app)"""
         from claims.models import Voyage
         return Voyage.objects.filter(
             imo_number=self.imo_number
         ).select_related('ship_owner', 'assigned_analyst').order_by('-laycan_start')
 
-    def get_claim_history(self):
+    def get_claim_history(self) -> QuerySet:
         """Get all claims for this ship's voyages (from claims app)"""
         from claims.models import Claim
         return Claim.objects.filter(
@@ -154,7 +158,7 @@ class Ship(models.Model):
         ).select_related('voyage', 'ship_owner', 'assigned_to').order_by('-created_at')
 
     @property
-    def is_charter_active(self):
+    def is_charter_active(self) -> bool:
         """Check if time charter is currently active"""
         if not self.is_tc_fleet or not self.charter_start_date or not self.charter_end_date:
             return False
@@ -162,7 +166,7 @@ class Ship(models.Model):
         return self.charter_start_date <= today <= self.charter_end_date
 
     @property
-    def charter_days_remaining(self):
+    def charter_days_remaining(self) -> int:
         """Calculate days remaining in time charter"""
         if not self.is_charter_active or not self.charter_end_date:
             return 0
@@ -370,11 +374,11 @@ class TCFleet(models.Model):
             models.Index(fields=['imo_number', 'delivery_date']),  # Ship contract history
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.ship_name} (IMO: {self.imo_number}) - {self.radar_deal_number}"
 
     @property
-    def contract_status(self):
+    def contract_status(self) -> str:
         """Calculate current contract status based on dates"""
         today = timezone.now().date()
 
@@ -395,7 +399,7 @@ class TCFleet(models.Model):
         return 'UNKNOWN'
 
     @property
-    def days_remaining(self):
+    def days_remaining(self) -> int:
         """Calculate days remaining until redelivery"""
         if self.delivery_status == 'REDELIVERED':
             return 0
@@ -405,29 +409,29 @@ class TCFleet(models.Model):
         return 0
 
     @property
-    def charter_length_months(self):
+    def charter_length_months(self) -> float:
         """Calculate charter length in months"""
         return float(self.charter_length_years) * 12
 
     @property
-    def total_contract_value(self):
+    def total_contract_value(self) -> Decimal:
         """Calculate total contract value in USD"""
         return self.tc_rate_monthly * Decimal(str(self.charter_length_months))
 
-    def get_ship_master_data(self):
+    def get_ship_master_data(self) -> Optional[Ship]:
         """Get related Ship master data if exists"""
         try:
             return Ship.objects.get(imo_number=self.imo_number)
         except Ship.DoesNotExist:
             return None
 
-    def get_contract_history_for_ship(self):
+    def get_contract_history_for_ship(self) -> QuerySet:
         """Get all TC contracts for this IMO number"""
         return TCFleet.objects.filter(
             imo_number=self.imo_number
         ).order_by('-delivery_date')
 
-    def get_current_ship_name(self):
+    def get_current_ship_name(self) -> Optional[str]:
         """Get current ship name from Ship master data if different"""
         ship = self.get_ship_master_data()
         if ship and ship.vessel_name != self.ship_name:
@@ -695,14 +699,14 @@ class ShipSpecification(models.Model):
             models.Index(fields=['vessel_type']),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.vessel_name} ({self.imo_number})"
 
-    def get_tc_fleet_contracts(self):
+    def get_tc_fleet_contracts(self) -> QuerySet:
         """Get all TC Fleet contracts for this vessel"""
         return TCFleet.objects.filter(imo_number=self.imo_number).order_by('-delivery_date')
 
-    def get_active_tc_contract(self):
+    def get_active_tc_contract(self) -> Optional[TCFleet]:
         """Get the currently active TC contract if exists"""
         return TCFleet.objects.filter(
             imo_number=self.imo_number,
@@ -710,13 +714,13 @@ class ShipSpecification(models.Model):
         ).first()
 
     @property
-    def displacement(self):
+    def displacement(self) -> Decimal:
         """Calculate displacement (DWT + Lightweight)"""
         return self.summer_deadweight + self.lightweight
 
     @property
-    def cargo_capacity_per_tank(self):
+    def cargo_capacity_per_tank(self) -> Decimal:
         """Calculate average cargo capacity per tank"""
         if self.number_of_cargo_tanks > 0:
             return self.total_cargo_capacity / self.number_of_cargo_tanks
-        return 0
+        return Decimal('0')

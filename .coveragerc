@@ -1,0 +1,32 @@
+[run]
+source = .
+omit =
+    */migrations/*
+    */tests.py
+    */test_*.py
+    */*_tests.py
+    */venv/*
+    */env/*
+    */settings.py
+    */wsgi.py
+    */asgi.py
+    */__pycache__/*
+    */staticfiles/*
+    */media/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    def __str__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if settings.DEBUG
+    if DEBUG
+    pass
+    except ImportError:
+precision = 2
+
+[html]
+directory = htmlcov

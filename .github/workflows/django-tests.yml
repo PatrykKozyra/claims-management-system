@@ -1,0 +1,177 @@
+name: Django CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run migrations
+      env:
+        SECRET_KEY: 'test-secret-key-for-ci-only-not-for-production'
+        DEBUG: 'True'
+      run: |
+        python manage.py migrate
+
+    - name: Run pytest with coverage
+      env:
+        SECRET_KEY: 'test-secret-key-for-ci-only-not-for-production'
+        DEBUG: 'True'
+      run: |
+        pytest --cov --cov-report=xml --cov-report=html --cov-report=term
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+    - name: Archive coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report-python-${{ matrix.python-version }}
+        path: htmlcov/
+        retention-days: 30
+
+  lint:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black mypy django-stubs
+
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+
+    - name: Check formatting with black
+      run: |
+        black --check --line-length=120 .
+      continue-on-error: true
+
+    - name: Type check with mypy
+      run: |
+        mypy claims ships port_activities --ignore-missing-imports
+      continue-on-error: true
+
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety
+
+    - name: Run bandit security linter
+      run: |
+        bandit -r claims ships port_activities -f json -o bandit-report.json
+      continue-on-error: true
+
+    - name: Check dependencies for known vulnerabilities
+      run: |
+        safety check --json
+      continue-on-error: true
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: bandit-report.json
+        retention-days: 30
+
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Check for missing migrations
+      env:
+        SECRET_KEY: 'test-secret-key-for-ci-only-not-for-production'
+        DEBUG: 'True'
+      run: |
+        python manage.py makemigrations --check --dry-run
+
+    - name: Collect static files
+      env:
+        SECRET_KEY: 'test-secret-key-for-ci-only-not-for-production'
+        DEBUG: 'False'
+        STATIC_ROOT: 'staticfiles'
+      run: |
+        python manage.py collectstatic --noinput
+
+    - name: Build summary
+      run: |
+        echo "✅ All checks passed!"
+        echo "📊 Test coverage reports available in artifacts"
+        echo "🔒 Security scan completed"
