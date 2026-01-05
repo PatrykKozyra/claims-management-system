@@ -5,7 +5,7 @@ urlpatterns = [
     # Authentication
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
-    path('register/', views.register_view, name='register'),
+    path('change-password-first-login/', views.change_password_first_login, name='change_password_first_login'),
 
     # Dashboard
     path('', views.dashboard, name='dashboard'),
@@ -22,12 +22,12 @@ urlpatterns = [
     path('analytics/export/payment/', views.export_payment_breakdown, name='export_payment_breakdown'),
     path('analytics/export/owner/', views.export_owner_stats, name='export_owner_stats'),
 
-    # Claims
+    # Claims (Note: Create/Delete disabled - claims managed via RADAR sync only)
     path('claims/', views.claim_list, name='claim_list'),
-    path('claims/create/', views.claim_create, name='claim_create'),
+    # path('claims/create/', views.claim_create, name='claim_create'),  # DISABLED: Claims created via RADAR sync only
     path('claims/<int:pk>/', views.claim_detail, name='claim_detail'),
     path('claims/<int:pk>/edit/', views.claim_update, name='claim_update'),
-    path('claims/<int:pk>/delete/', views.claim_delete, name='claim_delete'),
+    # path('claims/<int:pk>/delete/', views.claim_delete, name='claim_delete'),  # DISABLED: Claims deleted via RADAR sync only
     path('claims/<int:pk>/status/', views.claim_status_update, name='claim_status_update'),
 
     # Comments
@@ -41,6 +41,7 @@ urlpatterns = [
 
     # User Profile
     path('users/', views.user_directory, name='user_directory'),
+    path('users/create/', views.user_create, name='user_create'),
     path('users/export/', views.export_users, name='export_users'),
     path('users/<int:user_id>/', views.user_profile, name='user_profile'),
     path('users/<int:user_id>/edit/', views.user_profile_edit, name='user_profile_edit'),

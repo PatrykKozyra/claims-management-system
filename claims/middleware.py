@@ -2,7 +2,8 @@
 Middleware for error handling and user-friendly error messages
 """
 
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.db.utils import OperationalError, DatabaseError, IntegrityError
 from django.core.exceptions import ValidationError
 from django.http import Http404, HttpResponseServerError
@@ -10,6 +11,37 @@ from django.contrib import messages
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class PasswordChangeRequiredMiddleware:
+    """
+    Middleware to redirect users who must change their password
+    to the password change page before accessing any other page
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Allow access to these URLs without password change
+        allowed_paths = [
+            reverse('login'),
+            reverse('logout'),
+            reverse('change_password_first_login'),
+            '/admin/',  # Allow admin access
+            '/static/',  # Allow static files
+            '/media/',   # Allow media files
+        ]
+
+        # Check if user is authenticated and must change password
+        if request.user.is_authenticated and hasattr(request.user, 'must_change_password'):
+            if request.user.must_change_password:
+                # Allow access to allowed paths
+                if not any(request.path.startswith(path) for path in allowed_paths):
+                    return redirect('change_password_first_login')
+
+        response = self.get_response(request)
+        return response
 
 
 class DatabaseErrorHandlingMiddleware:

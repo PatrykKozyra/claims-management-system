@@ -1,7 +1,23 @@
 """
 RADAR Synchronization Service
 
-This service handles all RADAR API integration and data synchronization.
+⚠️ PLACEHOLDER CODE - AWAITING RADAR API INTEGRATION ⚠️
+
+STATUS: This is placeholder/template code for future RADAR system integration.
+        All methods contain TODO comments and return mock data.
+        The system currently operates standalone without RADAR connectivity.
+
+This service will handle all RADAR API integration and data synchronization when:
+1. RADAR API endpoints are provided
+2. Authentication credentials are configured
+3. API documentation is available
+4. Implementation is completed (all TODO items addressed)
+
+Current functionality:
+- Structure is in place with proper error handling
+- Logging framework configured
+- Mock data for testing purposes
+- Ready for actual API implementation
 """
 from typing import Dict, List, Any, Optional
 from datetime import datetime

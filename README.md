@@ -37,6 +37,12 @@ The system is organized into specialized Django apps for separation of concerns:
   - Activity statistics (voyages assigned, claims handled)
 
 ### Claims Management
+- **RADAR System Integration** ⚠️
+  - **Claims synced from RADAR system only** (creation/deletion disabled in UI)
+  - Automatic sync of voyages and claims from RADAR
+  - Users can update, comment, and manage existing claims
+  - Ensures single source of truth and data consistency
+
 - **Voyage Assignment System**
   - Assign voyages to analysts
   - Team leads can assign to team members
@@ -45,13 +51,14 @@ The system is organized into specialized Django apps for separation of concerns:
   - Reassignment capability with reason tracking
 
 - **Claims Lifecycle**
-  - Create, view, edit, and delete claims
+  - View and edit claims (creation via RADAR sync only)
   - Track voyage details and contract terms
   - Automatic demurrage calculations
   - Status workflow: Draft → Under Review → Submitted → Settled/Rejected
   - Payment status tracking with RADAR sync
   - Time-barred claims detection
   - Activity logging for all claim changes
+  - Add comments and upload documents
 
 - **Optimistic Locking**
   - Prevent concurrent edit conflicts
@@ -523,7 +530,7 @@ coverage report
 coverage html
 ```
 
-See [TESTING_DOCUMENTATION.md](TESTING_DOCUMENTATION.md) for comprehensive testing guide.
+See [docs/development/TESTING.md](docs/development/TESTING.md) for comprehensive testing guide.
 
 ### Production Considerations
 
@@ -594,12 +601,33 @@ See [TESTING_DOCUMENTATION.md](TESTING_DOCUMENTATION.md) for comprehensive testi
 
 ## Documentation
 
-- **[README.md](README.md)** - This file, comprehensive overview
-- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed installation and configuration
-- **[TESTING_DOCUMENTATION.md](TESTING_DOCUMENTATION.md)** - Testing strategy and test cases
-- **[USER_PERMISSIONS_GUIDE.md](USER_PERMISSIONS_GUIDE.md)** - Permission management
-- **[TEAM_LEAD_ASSIGNMENT_FEATURES.md](TEAM_LEAD_ASSIGNMENT_FEATURES.md)** - Feature overview
-- **[IMPROVEMENTS_LOG.md](IMPROVEMENTS_LOG.md)** - Changelog and improvements
+### Quick Links
+- **[README.md](README.md)** - This file, project overview
+- **[SETUP_GUIDE](docs/setup/SETUP_GUIDE.md)** - Installation and configuration
+- **[TESTING](docs/development/TESTING.md)** - Testing guide and best practices
+- **[API Guide](docs/api/API_GUIDE.md)** - REST API documentation
+- **[CHANGELOG](docs/project/CHANGELOG.md)** - Version history and improvements
+
+### Setup & Configuration
+- [docs/setup/SETUP_GUIDE.md](docs/setup/SETUP_GUIDE.md) - Detailed installation instructions
+- [docs/setup/SECURITY_SETUP.md](docs/setup/SECURITY_SETUP.md) - Security configuration
+
+### Features & User Guides
+- [docs/features/TEAM_LEAD_ASSIGNMENT_FEATURES.md](docs/features/TEAM_LEAD_ASSIGNMENT_FEATURES.md) - Team lead features
+- [docs/features/USER_PERMISSIONS_GUIDE.md](docs/features/USER_PERMISSIONS_GUIDE.md) - Permission system
+- [docs/features/NEW_FEATURES_GUIDE.md](docs/features/NEW_FEATURES_GUIDE.md) - Latest features
+
+### Development
+- [docs/development/TESTING.md](docs/development/TESTING.md) - Testing guide (173 tests)
+- [docs/development/TYPE_HINTS_AND_CBV_SUMMARY.md](docs/development/TYPE_HINTS_AND_CBV_SUMMARY.md) - Code style guide
+- [docs/development/IMPLEMENTATION_GUIDE.md](docs/development/IMPLEMENTATION_GUIDE.md) - Implementation patterns
+
+### API Documentation
+- [docs/api/API_GUIDE.md](docs/api/API_GUIDE.md) - REST API reference and usage
+
+### Project Status
+- [docs/project/STATUS.md](docs/project/STATUS.md) - Current status and improvements
+- [docs/project/CHANGELOG.md](docs/project/CHANGELOG.md) - Complete version history
 
 ## License
 

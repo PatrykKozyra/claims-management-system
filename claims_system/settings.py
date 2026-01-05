@@ -64,6 +64,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Custom middleware
+    'claims.middleware.PasswordChangeRequiredMiddleware',
     'claims_system.middleware.SecurityHeadersMiddleware',
     'claims_system.middleware.FileUploadValidationMiddleware',
     'claims_system.middleware.ErrorHandlingMiddleware',
@@ -119,16 +120,13 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {
+        'NAME': 'claims.validators.CustomPasswordValidator',
+    },
+    {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
 

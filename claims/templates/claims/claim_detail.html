@@ -11,11 +11,9 @@
             <i class="bi bi-pencil"></i> Edit
         </a>
         {% endif %}
-        {% if can_delete %}
-        <a href="{% url 'claim_delete' claim.pk %}" class="btn btn-danger">
-            <i class="bi bi-trash"></i> Delete
-        </a>
-        {% endif %}
+        <span class="text-muted small align-self-center">
+            <i class="bi bi-info-circle"></i> Synced from RADAR
+        </span>
     </div>
 </div>
 

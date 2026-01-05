@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
@@ -12,7 +12,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from .models import Claim, Comment, Document, User, Voyage, ShipOwner, ClaimActivityLog
 from .forms import (ClaimForm, CommentForm, DocumentForm, ClaimStatusForm,
-                    UserRegistrationForm, UserProfileEditForm, AdminUserEditForm)
+                    UserProfileEditForm, AdminUserEditForm, AdminUserCreationForm)
 
 
 def log_claim_activity(claim, user, action, message, old_value='', new_value=''):
@@ -30,6 +30,9 @@ def log_claim_activity(claim, user, action, message, old_value='', new_value='')
 
 def login_view(request):
     if request.user.is_authenticated:
+        # Check if user must change password
+        if request.user.must_change_password:
+            return redirect('change_password_first_login')
         return redirect('dashboard')
 
     if request.method == 'POST':
@@ -38,6 +41,9 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
+            # Check if user must change password on first login
+            if user.must_change_password:
+                return redirect('change_password_first_login')
             return redirect('dashboard')
         else:
             messages.error(request, 'Invalid username or password')
@@ -50,18 +56,43 @@ def logout_view(request):
     return redirect('login')
 
 
-def register_view(request):
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, 'Registration successful!')
-            return redirect('dashboard')
-    else:
-        form = UserRegistrationForm()
+@login_required
+def change_password_first_login(request):
+    """Force password change on first login"""
+    user = request.user
 
-    return render(request, 'claims/register.html', {'form': form})
+    # If user doesn't need to change password, redirect to dashboard
+    if not user.must_change_password:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        new_password1 = request.POST.get('new_password1')
+        new_password2 = request.POST.get('new_password2')
+
+        if new_password1 != new_password2:
+            messages.error(request, 'Passwords do not match.')
+        else:
+            # Validate password using Django's password validators
+            from django.contrib.auth.password_validation import validate_password
+            from django.core.exceptions import ValidationError
+
+            try:
+                validate_password(new_password1, user)
+                # Password is valid, update it
+                user.set_password(new_password1)
+                user.must_change_password = False
+                user.save()
+
+                # Update session to avoid logout
+                update_session_auth_hash(request, user)
+
+                messages.success(request, 'Password changed successfully!')
+                return redirect('dashboard')
+            except ValidationError as e:
+                for error in e.messages:
+                    messages.error(request, error)
+
+    return render(request, 'claims/change_password_first_login.html')
 
 
 @login_required
@@ -1098,6 +1129,40 @@ def user_directory(request):
     }
 
     return render(request, 'claims/user_directory.html', context)
+
+
+@login_required
+def user_create(request):
+    """Create a new user account - Only admins can access"""
+    # Check if user is admin
+    if not request.user.is_admin_role():
+        messages.error(request, 'Only administrators can create user accounts.')
+        return redirect('user_directory')
+
+    if request.method == 'POST':
+        form = AdminUserCreationForm(request.POST)
+        if form.is_valid():
+            # Save the new user
+            new_user = form.save()
+
+            # Track who created this user
+            new_user.created_by = request.user
+            new_user.save()
+
+            messages.success(
+                request,
+                f'User account "{new_user.username}" created successfully! '
+                f'The user will be required to change their password on first login.'
+            )
+            return redirect('user_profile', user_id=new_user.id)
+    else:
+        form = AdminUserCreationForm()
+
+    context = {
+        'form': form,
+    }
+
+    return render(request, 'claims/user_create.html', context)
 
 
 @login_required

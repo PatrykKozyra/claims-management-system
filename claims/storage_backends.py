@@ -1,13 +1,20 @@
 """
 Custom storage backends for cloud file storage.
 
-This module provides storage backends for different cloud providers.
-Currently includes SharePoint storage backend template.
+⚠️ PLACEHOLDER CODE - AWAITING SHAREPOINT APPROVAL ⚠️
 
-To enable SharePoint storage:
+This module provides storage backends for different cloud providers.
+Currently includes SharePoint storage backend TEMPLATE.
+
+STATUS: This is placeholder/template code for future SharePoint integration.
+        All methods contain TODO comments and are NOT yet implemented.
+        The system currently uses local file storage via DEFAULT_FILE_STORAGE.
+
+To enable SharePoint storage when approved:
 1. Install required packages: pip install msal requests
 2. Configure settings.py with SharePoint credentials (via environment variables)
-3. Set DEFAULT_FILE_STORAGE = 'claims.storage_backends.SharePointStorage'
+3. Implement all methods marked with TODO comments
+4. Set DEFAULT_FILE_STORAGE = 'claims.storage_backends.SharePointStorage'
 """
 
 from django.core.files.storage import Storage

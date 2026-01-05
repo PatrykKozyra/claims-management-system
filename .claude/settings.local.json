@@ -40,7 +40,17 @@
       "Bash(ping:*)",
       "Bash(del temp_login.html)",
       "Bash(.\\\\venv\\\\Scripts\\\\pip install -r requirements.txt)",
-      "Bash(.venvScriptspython.exe manage.py migrate)"
+      "Bash(.venvScriptspython.exe manage.py migrate)",
+      "Bash(taskkill /F /PID 11924)",
+      "Bash(taskkill //F //PID 11924)",
+      "Bash(taskkill //F //PID 45212)",
+      "Bash(python:*)",
+      "Bash(.\\\\venv\\\\Scripts\\\\python manage.py check)",
+      "Bash(find:*)",
+      "Bash(del nul)",
+      "Bash(del claimstemplatesclaimsregister.html)",
+      "Bash(rm:*)",
+      "Bash(tree:*)"
     ]
   }
 }

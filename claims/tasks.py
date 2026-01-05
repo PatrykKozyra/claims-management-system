@@ -1,11 +1,16 @@
 """
 Celery tasks for Claims Management System
 
+⚠️ NOTE: RADAR sync tasks are PLACEHOLDER CODE awaiting API integration ⚠️
+
 Background tasks for:
-- RADAR synchronization
-- Excel exports
-- Email notifications
-- Data maintenance
+- RADAR synchronization (TODO: Implement when API is available)
+- Excel exports (Implemented)
+- Email notifications (Implemented)
+- Data maintenance (Implemented)
+
+Tasks marked with TODO are placeholder implementations that return mock data.
+They are ready for actual RADAR API integration when credentials and endpoints are provided.
 """
 from celery import shared_task
 from django.core.mail import send_mail

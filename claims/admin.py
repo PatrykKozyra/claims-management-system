@@ -7,14 +7,21 @@ from .models import User, Claim, Comment, Document, Voyage, ShipOwner, VoyageAss
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     fieldsets = BaseUserAdmin.fieldsets + (
-        ('Additional Info', {'fields': ('role', 'department', 'phone')}),
+        ('Additional Info', {'fields': ('role', 'department', 'position', 'bio', 'profile_photo')}),
+        ('Settings', {'fields': ('dark_mode', 'must_change_password')}),
     )
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
-        ('Additional Info', {'fields': ('role', 'department', 'phone')}),
+        ('Additional Info', {'fields': ('role', 'department', 'position')}),
     )
-    list_display = ['username', 'email', 'first_name', 'last_name', 'role', 'department', 'is_staff']
-    list_filter = ['role', 'is_staff', 'is_superuser', 'department']
+    list_display = ['username', 'email', 'first_name', 'last_name', 'role', 'department', 'is_staff', 'must_change_password']
+    list_filter = ['role', 'is_staff', 'is_superuser', 'department', 'must_change_password']
     search_fields = ['username', 'email', 'first_name', 'last_name']
+
+    def save_model(self, request, obj, form, change):
+        """Set must_change_password=True for newly created users"""
+        if not change:  # New user
+            obj.must_change_password = True
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(ShipOwner)
