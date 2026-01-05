@@ -4,7 +4,7 @@
 
 This guide covers the comprehensive testing and error handling system in the Claims Management System.
 
-**Current Status**: ✅ **173 tests passing** across all apps
+**Current Status**: ✅ **292 tests** (290 passing) | **44.69% Coverage** (Target: 70%)
 
 ---
 
@@ -42,85 +42,84 @@ pytest -v
 
 ## Test Suite Status
 
-### Ships App - 38 Tests ✅
+### Test Files Overview
 
-**File**: [ships/tests.py](../../ships/tests.py)
+**Total: 8 test files with 292 tests**
 
-**Coverage**:
-- Ship Model (14 tests)
-- TCFleet Model (14 tests)
-- ShipSpecification (Q88) Model (7 tests)
-- Cross-App Integration (3 tests)
+#### Claims App Tests
 
-**Tests Include**:
-- Model creation and validation
-- Property calculations (charter_days_remaining, contract_status)
-- Uniqueness constraints (IMO numbers, RADAR deal numbers)
-- Business logic (active charters, expiring contracts)
-- Edge cases (expired charters, zero tanks)
+1. **[claims/tests.py](../../claims/tests.py)** - Core models (enhanced)
+   - User Model (29 tests)
+   - ShipOwner Model (10 tests)
+   - Voyage Model (17 tests)
+   - Claim Model (23 tests)
+   - VoyageAssignment Model (4 tests)
+   - ClaimActivityLog Model (4 tests)
 
-**Result**: ✅ All 38 tests PASSING
+2. **[claims/test_security.py](../../claims/test_security.py)** - Security tests (enhanced)
+   - SQL injection prevention
+   - XSS prevention
+   - CSRF protection
+   - Authentication & authorization
+   - Session security
 
----
+3. **[claims/test_views.py](../../claims/test_views.py)** - View tests (60 tests)
+   - Dashboard, voyages, claims, users
+   - Authentication, analytics, exports
 
-### Port Activities App - 44 Tests ✅
+4. **[claims/test_views_extended.py](../../claims/test_views_extended.py)** - Extended views (32 tests)
+   - Status updates, assignments, comments
+   - Documents, filtering, permissions
 
-**File**: [port_activities/tests.py](../../port_activities/tests.py)
+5. **[claims/test_api_views.py](../../claims/test_api_views.py)** - REST API (24 tests)
+   - Claim/Voyage/ShipOwner/User APIs
+   - Filtering, pagination, permissions
 
-**Coverage**:
-- ActivityType Model (8 tests)
-- PortActivity Model (24 tests)
-- Cross-App Integration (6 tests)
-- Edge Cases & Validation (6 tests)
+6. **[claims/test_services.py](../../claims/test_services.py)** - Services (22 tests)
+   - Excel export service
+   - Notification service
+   - RADAR sync service
 
-**Tests Include**:
-- Activity type management
-- Port activity creation and validation
-- Duration calculations (hours, days)
-- Date status tracking (Estimated vs Actual)
-- Overlap validation
-- RADAR sync functionality
-- Deletion protection (PROTECT/SET_NULL)
+#### Ships App Tests
 
-**Result**: ✅ All 44 tests PASSING
+7. **[ships/tests.py](../../ships/tests.py)** - Models (38 tests)
+   - Ship, TCFleet, ShipSpecification models
+   - Business logic and validations
 
----
+8. **[ships/test_views.py](../../ships/test_views.py)** - Views (18 tests)
+   - Ship management views
+   - Fleet management, exports
 
-### Claims App - 91 Tests ✅
+#### Port Activities App Tests
 
-**File**: [claims/tests.py](../../claims/tests.py)
+9. **[port_activities/tests.py](../../port_activities/tests.py)** - Models (44 tests)
+   - ActivityType, PortActivity models
+   - Duration calculations, RADAR sync
 
-**Coverage**:
-- User Model (29 tests)
-- ShipOwner Model (10 tests)
-- Voyage Model (17 tests)
-- Claim Model (23 tests)
-- VoyageAssignment Model (4 tests)
-- ClaimActivityLog Model (4 tests)
-- Legacy Integration Tests (4 tests)
+10. **[port_activities/test_views.py](../../port_activities/test_views.py)** - Views (17 tests)
+    - Port activity management views
+    - Activity type management, exports
 
-**Tests Include**:
-- Role-based permissions (READ, READ_EXPORT, WRITE, TEAM_LEAD, ADMIN)
-- User methods (can_export, can_write, is_admin_role)
-- Ship owner uniqueness constraints
-- Voyage RADAR integration and optimistic locking
-- Claim status workflow and payment tracking
-- Outstanding amount calculations
-- Assignment history tracking
-- Activity log audit trail
-
-**Result**: ✅ 91 out of 93 tests PASSING (2 legacy view tests need configuration)
+**Result**: ✅ 290 passing, 2 failing (99.3% pass rate)
 
 ---
 
 ## Test Statistics
 
-| App | Tests | Status | Coverage |
-|-----|-------|--------|----------|
-| **ships** | 38 | ✅ PASSING | Comprehensive |
-| **port_activities** | 44 | ✅ PASSING | Comprehensive |
-| **claims** | 91 | ✅ 91 PASSING | Comprehensive |
-| **Total** | **173** | ✅ **PASSING** | Complete for models |
+| App | Tests | Status | Coverage % |
+|-----|-------|--------|-----------|
+| **claims** (models) | 89% | ✅ Excellent | Models, Serializers, Forms |
+| **claims** (views) | 51% | ⚠️ Moderate | Views (target: 80%) |
+| **claims** (api_views) | 67% | ⚠️ Moderate | API endpoints |
+| **claims** (services) | 23-37% | ⚠️ Low | Services (target: 60%) |
+| **ships** (models) | 94% | ✅ Excellent | Ship models |
+| **ships** (views) | 7% | 🔴 Low | Views (HIGH PRIORITY) |
+| **port_activities** (models) | 100% | ✅ Perfect | Port activity models |
+| **port_activities** (views) | 20% | 🔴 Low | Views (HIGH PRIORITY) |
+| **system** (celery) | 92% | ✅ Excellent | Background tasks |
+| **Total** | **292 tests** | **290 passing** | **44.69%** (Target: 70%) |
+
+For detailed coverage breakdown, see [TEST_COVERAGE_REPORT.md](TEST_COVERAGE_REPORT.md)
 
 ---
 
@@ -171,12 +170,15 @@ pytest -m slow           # Slow-running tests
 ### Coverage Reports
 
 ```bash
+# Run with coverage
+pytest --cov=claims --cov=ships --cov=port_activities --cov-report=term-missing
+
 # Generate HTML coverage report
-pytest --cov-report=html
+pytest --cov=claims --cov=ships --cov=port_activities --cov-report=html
 
 # View report (open htmlcov/index.html)
 
-# Coverage must be >= 70% (configured in pytest.ini)
+# Coverage target: 70% (currently 44.69%)
 ```
 
 ---
@@ -547,21 +549,33 @@ Before deploying:
 
 ---
 
-## Next Steps
+## Next Steps to 70% Coverage
 
-### Immediate
-- Fix 2 legacy view tests in claims app
-- Add tests for Comment and Document models (optional)
-- Set up CI/CD pipeline (GitHub Actions)
+### High Priority (High Impact)
 
-### Future Enhancements
-- Integration tests across all three apps
-- View tests (forms, permissions, responses)
-- Admin interface tests
-- Security tests (SQL injection, XSS, CSRF)
-- Performance tests
-- API tests
-- End-to-end tests
+1. **Complete View Coverage** (+15% potential)
+   - Improve claims/views.py: 51% → 80%
+   - Improve ships/views.py: 7% → 60%
+   - Improve port_activities/views.py: 20% → 60%
+
+2. **Improve Service Tests** (+8% potential)
+   - Add implementation tests for services
+   - Mock external dependencies properly
+   - Test error handling and edge cases
+
+3. **Middleware Testing** (+3% potential)
+   - Test authentication middleware
+   - Test password change enforcement
+   - Test timezone handling
+
+### Estimated Effort
+- View tests: ~100 additional test cases
+- Service tests: ~30 additional test cases
+- Middleware tests: ~20 additional test cases
+- Integration tests: ~15 additional test cases
+- **Total**: ~165 additional test cases to reach 70%
+
+For detailed roadmap, see [TEST_COVERAGE_REPORT.md](TEST_COVERAGE_REPORT.md)
 
 ---
 

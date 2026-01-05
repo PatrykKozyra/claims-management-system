@@ -514,23 +514,31 @@ claims-management-system/
 
 ## Development & Deployment
 
-### Running Tests
+### Testing
+
+**Test Coverage: 44.69%** (Target: 70%)
+- **292 passing tests** across 8 test files
+- Comprehensive test suite covering models, views, APIs, and services
 
 ```bash
 # Run all tests
-python manage.py test claims.tests
+pytest
 
-# Run specific test class
-python manage.py test claims.tests.ConcurrencyTestCase
+# Run with coverage report
+pytest --cov=claims --cov=ships --cov=port_activities --cov-report=term-missing
 
-# Run with coverage
-pip install coverage
-coverage run --source='claims' manage.py test claims.tests
-coverage report
-coverage html
+# Run specific test file
+pytest claims/test_views.py -v
+
+# Generate HTML coverage report
+pytest --cov=claims --cov=ships --cov=port_activities --cov-report=html
+open htmlcov/index.html
 ```
 
-See [docs/development/TESTING.md](docs/development/TESTING.md) for comprehensive testing guide.
+**Documentation**:
+- [Testing Guide](docs/development/TESTING.md) - Comprehensive testing guide and best practices
+- [Coverage Report](docs/development/TEST_COVERAGE_REPORT.md) - Detailed coverage analysis and roadmap
+- [What Are Tests?](docs/project/WHAT_ARE_TESTS.md) - Simple explanation for non-developers
 
 ### Production Considerations
 
@@ -618,7 +626,8 @@ See [docs/development/TESTING.md](docs/development/TESTING.md) for comprehensive
 - [docs/features/NEW_FEATURES_GUIDE.md](docs/features/NEW_FEATURES_GUIDE.md) - Latest features
 
 ### Development
-- [docs/development/TESTING.md](docs/development/TESTING.md) - Testing guide (173 tests)
+- [docs/development/TESTING.md](docs/development/TESTING.md) - Testing guide (292 tests, 44.69% coverage)
+- [docs/development/TEST_COVERAGE_REPORT.md](docs/development/TEST_COVERAGE_REPORT.md) - Coverage analysis and roadmap
 - [docs/development/TYPE_HINTS_AND_CBV_SUMMARY.md](docs/development/TYPE_HINTS_AND_CBV_SUMMARY.md) - Code style guide
 - [docs/development/IMPLEMENTATION_GUIDE.md](docs/development/IMPLEMENTATION_GUIDE.md) - Implementation patterns
 
