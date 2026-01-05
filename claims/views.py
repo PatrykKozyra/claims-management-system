@@ -1246,4 +1246,185 @@ def toggle_dark_mode(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
+# ============================================================================
+# TEAM KPIs VIEWS (TEAM LEAD ONLY)
+# ============================================================================
+
+@login_required
+def team_kpis(request):
+    """Team KPIs dashboard - only accessible by Team Leads and Admins"""
+    user = request.user
+
+    # Check permission - only Team Leads and Admins
+    if not user.is_team_lead():
+        messages.error(request, 'You do not have permission to access Team KPIs')
+        return redirect('dashboard')
+
+    # Get selected month filter
+    selected_month = request.GET.get('month', '')
+
+    # Get all team members (WRITE, TEAM_LEAD roles)
+    team_members_queryset = User.objects.filter(
+        role__in=['WRITE', 'TEAM_LEAD', 'ADMIN']
+    ).annotate(
+        voyages_count=Count('assigned_voyages', distinct=True)
+    ).order_by('-voyages_count', 'first_name', 'last_name')
+
+    # Prepare team member statistics
+    team_members = []
+    for member in team_members_queryset:
+        # Get claims for this member
+        claims_queryset = Claim.objects.filter(assigned_to=member)
+
+        # Apply month filter if selected
+        if selected_month:
+            try:
+                year, month = selected_month.split('-')
+                claims_queryset = claims_queryset.filter(
+                    created_at__year=year,
+                    created_at__month=month
+                )
+            except (ValueError, AttributeError):
+                pass
+
+        total_claims = claims_queryset.count()
+        pending_claims = claims_queryset.filter(
+            status__in=['DRAFT', 'UNDER_REVIEW', 'SUBMITTED']
+        ).count()
+        resolved_claims = claims_queryset.filter(
+            status__in=['SETTLED', 'REJECTED']
+        ).count()
+
+        # Calculate resolution rate
+        resolution_rate = 0
+        if total_claims > 0:
+            resolution_rate = round((resolved_claims / total_claims) * 100)
+
+        team_members.append({
+            'user': member,
+            'voyages_count': member.voyages_count,
+            'total_claims': total_claims,
+            'pending_claims': pending_claims,
+            'resolved_claims': resolved_claims,
+            'resolution_rate': resolution_rate,
+        })
+
+    # Team-wide statistics
+    team_stats = {
+        'total_members': len(team_members),
+        'total_voyages': sum(m['voyages_count'] for m in team_members),
+        'total_pending_claims': sum(m['pending_claims'] for m in team_members),
+        'total_resolved_claims': sum(m['resolved_claims'] for m in team_members),
+    }
+
+    # Generate monthly trend data (last 6 months)
+    from datetime import datetime, timedelta
+    from dateutil.relativedelta import relativedelta
+
+    monthly_trend = []
+    for i in range(5, -1, -1):  # Last 6 months
+        month_date = timezone.now() - relativedelta(months=i)
+        month_start = month_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_end = (month_start + relativedelta(months=1)) - timedelta(seconds=1)
+
+        resolved_count = Claim.objects.filter(
+            status__in=['SETTLED', 'REJECTED'],
+            updated_at__gte=month_start,
+            updated_at__lte=month_end
+        ).count()
+
+        new_claims_count = Claim.objects.filter(
+            created_at__gte=month_start,
+            created_at__lte=month_end
+        ).count()
+
+        monthly_trend.append({
+            'month': month_start.strftime('%b %Y'),
+            'resolved': resolved_count,
+            'new_claims': new_claims_count,
+        })
+
+    # Available months for filter dropdown
+    available_months = []
+    for i in range(12):  # Last 12 months
+        month_date = timezone.now() - relativedelta(months=i)
+        available_months.append({
+            'value': month_date.strftime('%Y-%m'),
+            'label': month_date.strftime('%B %Y'),
+        })
+
+    # Selected month display
+    selected_month_display = ''
+    if selected_month:
+        try:
+            selected_month_obj = datetime.strptime(selected_month, '%Y-%m')
+            selected_month_display = selected_month_obj.strftime('%B %Y')
+        except ValueError:
+            pass
+
+    context = {
+        'team_members': team_members,
+        'team_stats': team_stats,
+        'monthly_trend': monthly_trend,
+        'available_months': available_months,
+        'selected_month': selected_month,
+        'selected_month_display': selected_month_display,
+    }
+
+    return render(request, 'claims/team_kpis.html', context)
+
+
+@login_required
+def team_member_details(request, user_id):
+    """AJAX endpoint to get detailed info about a team member"""
+    user = request.user
+
+    # Check permission
+    if not user.is_team_lead():
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+
+    # Get the team member
+    try:
+        member = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+
+    # Get assigned voyages
+    voyages = Voyage.objects.filter(assigned_analyst=member).select_related('ship_owner').prefetch_related('claims')
+
+    voyages_data = []
+    for voyage in voyages:
+        voyages_data.append({
+            'voyage_number': voyage.voyage_number,
+            'vessel_name': voyage.vessel_name,
+            'claims_count': voyage.claims.count(),
+            'status': voyage.assignment_status,
+        })
+
+    # Get claims statistics
+    claims_queryset = Claim.objects.filter(assigned_to=member)
+    total_claims = claims_queryset.count()
+    pending_claims = claims_queryset.filter(status__in=['DRAFT', 'UNDER_REVIEW', 'SUBMITTED']).count()
+    resolved_claims = claims_queryset.filter(status__in=['SETTLED', 'REJECTED']).count()
+
+    # Calculate resolution rate
+    resolution_rate = 0
+    if total_claims > 0:
+        resolution_rate = round((resolved_claims / total_claims) * 100)
+
+    # Prepare response data
+    data = {
+        'name': member.get_full_name() or member.username,
+        'role': member.get_role_display(),
+        'profile_photo': member.profile_photo.url if member.profile_photo else None,
+        'voyages': voyages_data,
+        'total_claims': total_claims,
+        'pending_claims': pending_claims,
+        'resolved_claims': resolved_claims,
+        'resolution_rate': resolution_rate,
+    }
+
+    return JsonResponse(data)
+
+
 

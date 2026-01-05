@@ -46,4 +46,8 @@ urlpatterns = [
     path('users/<int:user_id>/', views.user_profile, name='user_profile'),
     path('users/<int:user_id>/edit/', views.user_profile_edit, name='user_profile_edit'),
     path('toggle-dark-mode/', views.toggle_dark_mode, name='toggle_dark_mode'),
+
+    # Team KPIs (Team Lead Only)
+    path('team-kpis/', views.team_kpis, name='team_kpis'),
+    path('team-kpis/member/<int:user_id>/', views.team_member_details, name='team_member_details'),
 ]

@@ -312,6 +312,13 @@
                                             <i class="bi bi-speedometer2"></i> Dashboard
                                         </a>
                                     </li>
+                                    {% if user.is_team_lead %}
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if request.resolver_match.url_name == 'team_kpis' %}active{% endif %}" href="{% url 'team_kpis' %}">
+                                            <i class="bi bi-bar-chart-line"></i> Team KPIs
+                                        </a>
+                                    </li>
+                                    {% endif %}
                                     <li class="nav-item">
                                         <a class="nav-link {% if 'voyage' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'voyage_list' %}">
                                             <i class="bi bi-compass"></i> Voyage Assignment

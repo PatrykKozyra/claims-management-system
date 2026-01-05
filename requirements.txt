@@ -33,6 +33,7 @@ celery==5.4.0
 redis==5.2.1
 django-celery-beat==2.8.0
 django-celery-results==2.5.1
+python-dateutil==2.9.0
 
 # Caching
 django-redis==5.4.0
